@@ -9,7 +9,7 @@ from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.stattools import grangercausalitytests
 import pickle
 from sklearn.model_selection import train_test_split
-
+import re
 
 df_aapl = pd.read_csv("df_aaple.csv")
 df_small = df_aapl.iloc[:,:4]
@@ -20,7 +20,9 @@ df_small["# Buys"] = df_aapl["# Buys"]
 
 df_small_raw = df_small
 
-df_medium = df_aapl.iloc[:,:16]
+df_medium = df_aapl.iloc[:2000,:16]
+
+pd.DataFrame.to_csv(df_medium, "df_medium.csv")
 
 def algo(df, target, max_lag):
 
