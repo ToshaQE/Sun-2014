@@ -1,3 +1,4 @@
+import logging
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,6 +11,9 @@ from statsmodels.tsa.stattools import grangercausalitytests
 import pickle
 from sklearn.model_selection import train_test_split
 import re
+import logging
+
+logging.INFO
 
 df_aapl = pd.read_csv("df_aaple.csv")
 df_small = df_aapl.iloc[:,:4]
@@ -170,8 +174,7 @@ def algo(df, target, max_lag):
 
         test_data.append(y_lags_df)
 
-        #Formatting Xs    except ValueError:
-        print("Can not reject that the target variable 'reverse causes' independent features.")
+        #Formatting Xs    
         for i in list(range(1, lag_len+1)):
             columns.append(x_name+".L"+str(i))
 
@@ -194,17 +197,19 @@ def algo(df, target, max_lag):
         MAE_test = np.nanmean(abs(fin_model.predict() - y_test))
         
         MAE = {"train": MAE_train, "test": MAE_test}
+        logging.info("Check")
 
         return fin_model, aug_models, feature_n_dfs, feature_n_dfs_merge, MAE
 
     except ValueError:
-        print("Can not reject that the target variable 'reverse causes' independent features.")
+        logging.error("Can not reject that the target variable 'reverse causes' independent features.")
 
 
 
 fin_model, aug_models, dfs, dfs_merged, MAE = algo(df=df_medium, target="Close", max_lag=20)
 
 print(fin_model.summary())
+
 
 print(MAE)
 dfs_merged
