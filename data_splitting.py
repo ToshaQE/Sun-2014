@@ -15,6 +15,20 @@ import logging
 
 logging.INFO
 
+
+class Sun_Model:
+    def __init__(self, fin_model, summary, aug_models, MAE, train_y, train_x, test_y, test_x, y_pred):
+        self.fin_model = fin_model
+        self.summary = summary
+        self.MAE = MAE
+        self.aug_models = aug_models
+        self.train_y = train_y
+        self.train_x = train_x
+        self.test_y = test_y
+        self.test_x = test_x
+        self.y_pred = y_pred
+
+
 df_aapl = pd.read_csv("df_aaple.csv")
 df_small = df_aapl.iloc[:,:4]
 df_small.drop(columns="Adj. Close", inplace=True)
@@ -149,6 +163,7 @@ def algo(df, target, max_lag):
 
         fin_model = AutoReg(y_train_m, lags=0, exog=feature_n_dfs_merge).fit()
 
+        y_pred_in = fin_model.predict()
         MAE_train = np.nanmean(abs(fin_model.predict() - y_train_m))
 
         # Formatting the test dataframes to suit the model's exog format
@@ -175,17 +190,19 @@ def algo(df, target, max_lag):
         test_data.append(y_lags_df)
 
         #Formatting Xs    
-        for i in list(range(1, lag_len+1)):
-            columns.append(x_name+".L"+str(i))
+        for x_name, lag_len in n_lags_for_xi.items():
+            columns = []
+            for i in list(range(1, lag_len+1)):
+                columns.append(x_name+".L"+str(i))
 
-        feature_x_df = pd.DataFrame(columns=columns)
-        for i in list(range(lag_len)):
-            feature_x_df[columns[i]] = X_test[x_name].shift(i+1)
-        
-        feature_x_df = feature_x_df.iloc[max_sel_lag:,:]
-        feature_x_df.reset_index(drop=True, inplace=True)
-        
-        test_data.append(feature_x_df)
+            feature_x_df = pd.DataFrame(columns=columns)
+            for i in list(range(lag_len)):
+                feature_x_df[columns[i]] = X_test[x_name].shift(i+1)
+            
+            feature_x_df = feature_x_df.iloc[max_sel_lag:,:]
+            feature_x_df.reset_index(drop=True, inplace=True)
+            
+            test_data.append(feature_x_df)
     
         # Merging y and Xs
         test_data = pd.concat(test_data, axis=1)
@@ -194,22 +211,37 @@ def algo(df, target, max_lag):
         y_test = y_test.iloc[max_sel_lag:]
         y_test.reset_index(drop=True, inplace=True)
 
-        MAE_test = np.nanmean(abs(fin_model.predict() - y_test))
+        first_oos_ind = len(y_train_m)
+        last_oos_ind = first_oos_ind + len(y_test) - 1
+        y_pred_out = fin_model.predict(start=first_oos_ind, end=last_oos_ind, exog_oos=test_data)
+        y_pred_out.reset_index(drop=True, inplace=True)
+        MAE_test = np.nanmean(abs(y_pred_out - y_test))
+        #MAE_test = np.nanmean(abs(fin_model.predict(start=1579, end=1972, exog_oos=test_data) - y_test))
         
         MAE = {"train": MAE_train, "test": MAE_test}
         logging.info("Check")
 
-        return fin_model, aug_models, feature_n_dfs, feature_n_dfs_merge, MAE
+        Model_Data = Sun_Model(fin_model, fin_model.summary(), aug_models,MAE,
+                                y_train_m, feature_n_dfs_merge,
+                                y_test, test_data,
+                                y_pred_out)
 
+        #return fin_model, aug_models, feature_n_dfs, feature_n_dfs_merge, MAE, Sun_Model1
+        return Model_Data
     except ValueError:
         logging.error("Can not reject that the target variable 'reverse causes' independent features.")
 
 
 
-fin_model, aug_models, dfs, dfs_merged, MAE = algo(df=df_medium, target="Close", max_lag=20)
+#fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
+Model_Data = algo(df=df_medium, target="Close", max_lag=20)
 
-print(fin_model.summary())
+print(Model_Data.summary)
 
 
-print(MAE)
-dfs_merged
+print(Model_Data.MAE)
+print(Model_Data.train_y)
+
+Model_Data.train_x.to_csv("sun_x_train.csv", index=False)
+
+print("he")
