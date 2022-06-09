@@ -42,7 +42,7 @@ df_medium = df_aapl.iloc[:2000,:16]
 
 pd.DataFrame.to_csv(df_medium, "df_medium.csv")
 
-def algo(df, target, max_lag):
+def algo(df, target, max_lag, test_size):
 
     # Step 1: Tranformation for stationarity d
     # Here features are everything except for the date
@@ -64,7 +64,7 @@ def algo(df, target, max_lag):
     feature_df = df.loc[:, ~df.columns.isin([target, "Date"])]
     target_df = df.loc[:, target]
 
-    X_train, X_test, y_train, y_test = train_test_split(feature_df, target_df, test_size=0.2, shuffle=False) 
+    X_train, X_test, y_train, y_test = train_test_split(feature_df, target_df, test_size=test_size, shuffle=False) 
 
     # Step 2: Building a univariate model and finding the optimal l
     BICs = []
@@ -234,7 +234,7 @@ def algo(df, target, max_lag):
 
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
-Model_Data = algo(df=df_medium, target="Close", max_lag=20)
+Model_Data = algo(df=df_medium, target="Close", max_lag=20, test_size=0.2)
 
 print(Model_Data.summary)
 
