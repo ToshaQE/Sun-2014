@@ -221,7 +221,7 @@ def algo(df, target, max_lag):
         MAE = {"train": MAE_train, "test": MAE_test}
         logging.info("Check")
 
-        Model_Data = Sun_Model(fin_model, fin_model.summary(), aug_models,MAE,
+        Model_Data = Sun_Model(fin_model, fin_model.summary(), aug_models, MAE,
                                 y_train_m, feature_n_dfs_merge,
                                 y_test, test_data,
                                 y_pred_out)
