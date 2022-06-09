@@ -41,6 +41,7 @@ df_small_raw = df_small
 df_medium = df_aapl.iloc[:2000,:16]
 
 pd.DataFrame.to_csv(df_medium, "df_medium.csv")
+df_amzn = pd.read_csv("amzn.csv")
 
 def algo(df, target, max_lag, test_size):
 
@@ -242,6 +243,9 @@ print(Model_Data.summary)
 print(Model_Data.MAE)
 print(Model_Data.train_y)
 
+Model_Data.train_y.to_csv("sun_y_train.csv", index=False)
 Model_Data.train_x.to_csv("sun_x_train.csv", index=False)
+#Model_Data.y_pred.to_csv("y_pred.csv", index=False)
+
 
 print("he")
