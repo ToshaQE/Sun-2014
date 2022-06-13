@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 import re
 import logging
 
-logging.INFO
+# logging.INFO
 
 
 class Sun_Model:
@@ -30,18 +30,17 @@ class Sun_Model:
 
 
 df_aapl = pd.read_csv("df_aaple.csv")
-df_small = df_aapl.iloc[:,:4]
-df_small.drop(columns="Adj. Close", inplace=True)
-df_small["P/E"] = df_small["P/E (LTM)"]
-df_small.drop(columns="P/E (LTM)", inplace=True)
-df_small["# Buys"] = df_aapl["# Buys"]
+# df_small = df_aapl.iloc[:,:4]
+# df_small.drop(columns="Adj. Close", inplace=True)
+# df_small["P/E"] = df_small["P/E (LTM)"]
+# df_small.drop(columns="P/E (LTM)", inplace=True)
+# df_small["# Buys"] = df_aapl["# Buys"]
 
-df_small_raw = df_small
+# df_small_raw = df_small
 
 df_medium = df_aapl.iloc[:2000,:16]
 
 pd.DataFrame.to_csv(df_medium, "df_medium.csv")
-df_amzn = pd.read_csv("amzn.csv")
 
 def algo(df, target, max_lag, test_size):
 
@@ -245,6 +244,8 @@ print(Model_Data.train_y)
 
 Model_Data.train_y.to_csv("sun_y_train.csv", index=False)
 Model_Data.train_x.to_csv("sun_x_train.csv", index=False)
+Model_Data.test_y.to_csv("sun_y_test.csv", index=False)
+Model_Data.test_x.to_csv("sun_x_test.csv", index=False)
 #Model_Data.y_pred.to_csv("y_pred.csv", index=False)
 
 
