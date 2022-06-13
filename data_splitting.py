@@ -13,34 +13,29 @@ from sklearn.model_selection import train_test_split
 import re
 import logging
 
+
+from Sun_Model_Class import Sun_Model
 # logging.INFO
 
 
-class Sun_Model:
-    def __init__(self, fin_model, summary, aug_models, MAE, train_y, train_x, test_y, test_x, y_pred):
-        self.fin_model = fin_model
-        self.summary = summary
-        self.MAE = MAE
-        self.aug_models = aug_models
-        self.train_y = train_y
-        self.train_x = train_x
-        self.test_y = test_y
-        self.test_x = test_x
-        self.y_pred = y_pred
 
-
+#Reading in the data
 df_aapl = pd.read_csv("df_aaple.csv")
-# df_small = df_aapl.iloc[:,:4]
-# df_small.drop(columns="Adj. Close", inplace=True)
-# df_small["P/E"] = df_small["P/E (LTM)"]
-# df_small.drop(columns="P/E (LTM)", inplace=True)
-# df_small["# Buys"] = df_aapl["# Buys"]
+# Cleaning the names
+col_names = list(df_aapl.columns)
+new_names = []
+for n in col_names:
+    n = re.sub('[^A-Za-z0-9#% ]+', '', n)
+    n = re.sub('[^A-Za-z0-9% ]+', 'n', n)
+    n = re.sub('[^A-Za-z0-9 ]+', 'pc', n)
+    n = re.sub('[^A-Za-z0-9]+', '_', n)
+    new_names.append(n)
+df_aapl.columns = new_names
 
-# df_small_raw = df_small
-
+# Truncating the data
 df_medium = df_aapl.iloc[:2000,:16]
 
-pd.DataFrame.to_csv(df_medium, "df_medium.csv")
+# pd.DataFrame.to_csv(df_medium, "df_medium.csv")
 
 def algo(df, target, max_lag, test_size):
 
@@ -164,7 +159,7 @@ def algo(df, target, max_lag, test_size):
         fin_model = AutoReg(y_train_m, lags=0, exog=feature_n_dfs_merge).fit()
 
         y_pred_in = fin_model.predict()
-        MAE_train = np.nanmean(abs(fin_model.predict() - y_train_m))
+        MAE_train = np.nanmean(abs(y_pred_in - y_train_m))
 
         # Formatting the test dataframes to suit the model's exog format
         test_data = []
@@ -240,13 +235,10 @@ print(Model_Data.summary)
 
 
 print(Model_Data.MAE)
-print(Model_Data.train_y)
-
-Model_Data.train_y.to_csv("sun_y_train.csv", index=False)
-Model_Data.train_x.to_csv("sun_x_train.csv", index=False)
-Model_Data.test_y.to_csv("sun_y_test.csv", index=False)
-Model_Data.test_x.to_csv("sun_x_test.csv", index=False)
-#Model_Data.y_pred.to_csv("y_pred.csv", index=False)
+# print(Model_Data.train_y)
 
 
-print("he")
+filename = 'Sun_Model_Data'
+outfile = open(filename,'wb')
+pickle.dump(Model_Data,outfile)
+outfile.close()
