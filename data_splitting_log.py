@@ -44,7 +44,7 @@ def algo(df, target, max_lag, test_size):
     features = [n for n in list(df.columns) if n != "Date"]
 
     for feature in features:
-        result = adfuller(df[feature], autolag=None)
+        result = adfuller(df[feature], autolag="t-stat")
         counter = 0
         while result[1] > 0.05:
             feature_differenced = np.log(df[feature]) - np.log(df[feature].shift(1))
@@ -58,7 +58,7 @@ def algo(df, target, max_lag, test_size):
             #df_small.dropna()
             counter += 1
             #dropna(inplace=False) because it drops one observation for each feature
-            result = adfuller(df.dropna()[feature], autolag=None)
+            result = adfuller(df.dropna()[feature], autolag="t-stat")
         print(f'Order of integration for feature "{feature}" is {counter}')
     df.dropna(inplace=True)
     df.reset_index(drop=True, inplace=True)
