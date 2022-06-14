@@ -46,7 +46,7 @@ def algo(df, target, max_lag, test_size):
     for feature in features:
         result = adfuller(df[feature], autolag="t-stat")
         counter = 0
-        while result[1] > 0.05:
+        while result[1] > 0.01:
             df[feature] = df[feature] - df[feature].shift(1)
             #df_small.dropna()
             counter += 1
@@ -136,7 +136,7 @@ def algo(df, target, max_lag, test_size):
 
         gr_test_df = pd.concat([X_train[Xs[n]], y_train], axis=1)
         granger_p_stat = grangercausalitytests(gr_test_df, maxlag=[min_bic_ind_aug+1])[min_bic_ind_aug+1][0]['params_ftest'][1]
-        if granger_p_stat <= 0.05:
+        if granger_p_stat >= 0.05:
             aug_models[Xs[n]] = model
             feature_n_dfs[Xs[n]] = feature_n_df1
             feature_n_dfs_merge.append(y_and_x_lags_df.iloc[:,len(list(y_lags_df.columns)):])

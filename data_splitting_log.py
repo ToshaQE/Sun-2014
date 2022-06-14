@@ -34,8 +34,11 @@ df_aapl.columns = new_names
 
 # Truncating the data
 df_medium = df_aapl.iloc[:2000,:16]
+df_jpm = df_aapl = pd.read_csv("jpm.csv")
+df_jpm = df_jpm.iloc[:2000,:16]
 
-# pd.DataFrame.to_csv(df_medium, "df_medium.csv")
+
+pd.DataFrame.to_csv(df_medium, "df_medium.csv", index=False)
 
 def algo(df, target, max_lag, test_size):
 
@@ -46,7 +49,7 @@ def algo(df, target, max_lag, test_size):
     for feature in features:
         result = adfuller(df[feature], autolag="t-stat")
         counter = 0
-        while result[1] > 0.05:
+        while result[1] > 0.01:
             feature_differenced = np.log(df[feature]) - np.log(df[feature].shift(1))
             na_count = feature_differenced.isna().sum()
             # If NA count is greater than 1 (1 is caused by shifiting the series) it is likely that original series contains 0s
@@ -143,14 +146,14 @@ def algo(df, target, max_lag, test_size):
 
         gr_test_df = pd.concat([X_train[Xs[n]], y_train], axis=1)
         granger_p_stat = grangercausalitytests(gr_test_df, maxlag=[min_bic_ind_aug+1])[min_bic_ind_aug+1][0]['params_ftest'][1]
-        if granger_p_stat <= 0.05:
+        if granger_p_stat >= 0.05:
             aug_models[Xs[n]] = model
             feature_n_dfs[Xs[n]] = feature_n_df1
             feature_n_dfs_merge.append(y_and_x_lags_df.iloc[:,len(list(y_lags_df.columns)):])
             n_lags_for_xi[Xs[n]] = min_bic_ind_aug + 1
             #model.summary()
-        elif granger_p_stat <= 0.1:
-            print(f'\n\nGranger causality from "{target}" to "{Xs[n]}" is rejected with a p-value={granger_p_stat:.3}')
+        elif granger_p_stat >= 0.1:
+            print(f'\n\nGranger causality from "{target}" to "{Xs[n]}" can not rejected with a p-value={granger_p_stat:.3}')
         else:
             continue
 
@@ -249,3 +252,25 @@ filename = 'Sun_Model_Data'
 outfile = open(filename,'wb')
 pickle.dump(Model_Data,outfile)
 outfile.close()
+
+
+
+# =======================================================================================
+#                           coef    std err          z      P>|z|      [0.025      0.975]
+# ---------------------------------------------------------------------------------------
+# const                   0.0012      0.001      1.152      0.250      -0.001       0.003
+# Adj_Close.L1           -0.0813      0.030     -2.704      0.007      -0.140      -0.022
+# EPS_Est_High_NTM.L1    -0.0117      0.025     -0.473      0.636      -0.060       0.037
+# EPS_Est_Low_NTM.L1      0.0672      0.029      2.321      0.020       0.010       0.124
+# Volume.L1           -1.533e-11   1.55e-11     -0.989      0.323   -4.57e-11    1.51e-11
+# SI_pc.L1               -0.0056      0.007     -0.768      0.442      -0.020       0.009
+# Vol.L1                  0.0121      0.005      2.337      0.019       0.002       0.022
+# n_Buys.L1              -0.0109      0.051     -0.215      0.830      -0.110       0.088
+# n_Sell.L1               0.0697      0.055      1.274      0.203      -0.038       0.177
+# n_Hold.L1               0.0051      0.032      0.160      0.873      -0.058       0.068
+# Total_Rec.L1           -0.0367      0.045     -0.816      0.415      -0.125       0.051
+# pc_Buy.L1               0.0258      0.088      0.292      0.770      -0.147       0.199
+# pc_Sell.L1             -0.6161      0.636     -0.968      0.333      -1.863       0.631
+# pc_Hold.L1             -0.0294      0.377     -0.078      0.938      -0.769       0.710
+# =======================================================================================
+# {'train': 0.008838770424258235, 'test': 0.01604004994638451}
