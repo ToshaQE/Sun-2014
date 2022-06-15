@@ -142,8 +142,8 @@ def algo(df, target, max_lag, test_size):
             feature_n_dfs_merge.append(y_and_x_lags_df.iloc[:,len(list(y_lags_df.columns)):])
             n_lags_for_xi[Xs[n]] = min_bic_ind_aug + 1
             #model.summary()
-        elif granger_p_stat <= 0.1:
-            print(f'\n\nGranger causality from "{target}" to "{Xs[n]}" is rejected with a p-value={granger_p_stat:.3}')
+        elif granger_p_stat >= 0.01:
+            print(f'\n\nGranger causality from "{target}" to "{Xs[n]}" can not be rejected with a p-value={granger_p_stat:.3}')
         else:
             continue
 
@@ -229,7 +229,7 @@ def algo(df, target, max_lag, test_size):
 
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
-Model_Data = algo(df=df_medium, target="Close", max_lag=20, test_size=0.2)
+Model_Data = algo(df=df_medium, target="Close", max_lag=20, test_size=0.3)
 
 print(Model_Data.summary)
 
