@@ -32,10 +32,30 @@ for n in col_names:
     new_names.append(n)
 df_aapl.columns = new_names
 
-# Truncating the data
-df_medium = df_aapl.iloc[:2000,:16]
+# Truncating the dataw
+aapl_medium = df_aapl.iloc[:2000,:16]
+aapl_long = df_aapl.iloc[:,:16]
 
-# pd.DataFrame.to_csv(df_medium, "df_medium.csv")
+df_jpm = pd.read_csv("jpm.csv")
+df_jpm = df_jpm.iloc[:2000,:16]
+
+df_dehli = pd.read_csv("dehli_weather.csv")
+
+df_air_q = pd.read_csv("AirQualityUCI.csv")
+
+
+# df_SO_qs = pd.read_csv("MLTollsStackOverflow.csv")
+# df_SO_qs.drop("Tableau", axis=1, inplace=True)
+# df_SO_qs.drop("rasa", axis=1, inplace=True)
+# df_SO_qs.drop("AllenNLP", axis=1, inplace=True)
+# df_SO_qs.drop("Ray", axis=1, inplace=True)
+# df_SO_qs.drop("Trifacta", axis=1, inplace=True)
+# df_SO_qs.drop("Venes", axis=1, inplace=True)
+# df_SO_qs.drop("Flair", axis=1, inplace=True)
+
+
+
+
 
 def algo(df, target, max_lag, test_size):
 
@@ -46,7 +66,7 @@ def algo(df, target, max_lag, test_size):
     for feature in features:
         result = adfuller(df[feature], autolag="t-stat")
         counter = 0
-        while result[1] > 0.01:
+        while result[1] >= 0.01:
             df[feature] = df[feature] - df[feature].shift(1)
             #df_small.dropna()
             counter += 1
@@ -136,7 +156,7 @@ def algo(df, target, max_lag, test_size):
 
         gr_test_df = pd.concat([X_train[Xs[n]], y_train], axis=1)
         granger_p_stat = grangercausalitytests(gr_test_df, maxlag=[min_bic_ind_aug+1])[min_bic_ind_aug+1][0]['params_ftest'][1]
-        if granger_p_stat >= 0.05:
+        if granger_p_stat > 0.05:
             aug_models[Xs[n]] = model
             feature_n_dfs[Xs[n]] = feature_n_df1
             feature_n_dfs_merge.append(y_and_x_lags_df.iloc[:,len(list(y_lags_df.columns)):])
@@ -229,7 +249,7 @@ def algo(df, target, max_lag, test_size):
 
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
-Model_Data = algo(df=df_medium, target="Close", max_lag=20, test_size=0.3)
+Model_Data = algo(df=df_air_q, target="CO(GT)", max_lag=20, test_size=0.2)
 
 print(Model_Data.summary)
 

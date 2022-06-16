@@ -33,12 +33,18 @@ for n in col_names:
 df_aapl.columns = new_names
 
 # Truncating the data
-df_medium = df_aapl.iloc[:2000,:16]
-df_jpm = df_aapl = pd.read_csv("jpm.csv")
+aapl_medium = df_aapl.iloc[:2000,:16]
+aapl_long = df_aapl.iloc[:,:16]
+
+df_jpm = pd.read_csv("jpm.csv")
 df_jpm = df_jpm.iloc[:2000,:16]
 
+df_dehli = pd.read_csv("dehli_weather.csv")
 
-pd.DataFrame.to_csv(df_medium, "df_medium.csv", index=False)
+df_air_q = pd.read_csv("AirQualityUCI.csv")
+
+
+# pd.DataFrame.to_csv(df_medium, "df_medium.csv", index=False)
 
 def algo(df, target, max_lag, test_size):
 
@@ -146,7 +152,7 @@ def algo(df, target, max_lag, test_size):
 
         gr_test_df = pd.concat([X_train[Xs[n]], y_train], axis=1)
         granger_p_stat = grangercausalitytests(gr_test_df, maxlag=[min_bic_ind_aug+1])[min_bic_ind_aug+1][0]['params_ftest'][1]
-        if granger_p_stat >= 0.05:
+        if granger_p_stat > 0.05:
             aug_models[Xs[n]] = model
             feature_n_dfs[Xs[n]] = feature_n_df1
             feature_n_dfs_merge.append(y_and_x_lags_df.iloc[:,len(list(y_lags_df.columns)):])
@@ -239,7 +245,7 @@ def algo(df, target, max_lag, test_size):
 
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
-Model_Data = algo(df=df_medium, target="Close", max_lag=20, test_size=0.4)
+Model_Data = algo(df=df_dehli, target="meantemp", max_lag=20, test_size=0.2)
 
 print(Model_Data.summary)
 
