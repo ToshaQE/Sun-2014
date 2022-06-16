@@ -37,7 +37,9 @@ aapl_medium = df_aapl.iloc[:2000,:16]
 aapl_long = df_aapl.iloc[:,:16]
 
 df_jpm = pd.read_csv("jpm.csv")
-df_jpm = df_jpm.iloc[:2000,:16]
+jpm_medium = df_jpm.iloc[:2000,:16]
+jpm_long = df_jpm.iloc[:,:16]
+
 
 df_dehli = pd.read_csv("dehli_weather.csv")
 
@@ -245,7 +247,7 @@ def algo(df, target, max_lag, test_size):
 
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
-Model_Data = algo(df=df_dehli, target="meantemp", max_lag=20, test_size=0.2)
+Model_Data = algo(df=df_air_q, target="CO(GT)", max_lag=20, test_size=0.2)
 
 print(Model_Data.summary)
 
