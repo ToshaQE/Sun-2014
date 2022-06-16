@@ -42,6 +42,9 @@ df_jpm = df_jpm.iloc[:2000,:16]
 df_dehli = pd.read_csv("dehli_weather.csv")
 
 df_air_q = pd.read_csv("AirQualityUCI.csv")
+df_air_q.drop("Date", axis=1, inplace=True)
+pd.DataFrame.to_csv(df_air_q, "df_air_q_no_date.csv", index=True)
+
 
 
 # df_SO_qs = pd.read_csv("MLTollsStackOverflow.csv")
