@@ -252,7 +252,7 @@ def algo(df, target, max_lag, test_size):
 
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
-Model_Data = algo(df=df_air_q, target="CO(GT)", max_lag=20, test_size=0.2)
+Model_Data = algo(df=df_air_q, target="meantemp", max_lag=20, test_size=0.2)
 
 print(Model_Data.summary)
 
@@ -265,3 +265,5 @@ filename = 'Sun_Model_Data'
 outfile = open(filename,'wb')
 pickle.dump(Model_Data,outfile)
 outfile.close()
+
+# {'train': 1.2125139241871459, 'test': 1.199242993289765}
