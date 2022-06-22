@@ -56,16 +56,16 @@ from Sun_Model_Class import Sun_Model
 
 def algo(df, target, max_lag, stationarity_method, test_size):
 
-    # Cleaning column names
-    col_names = list(df.columns)
-    new_names = []
-    for n in col_names:
-        n = re.sub('[^A-Za-z0-9#% ]+', '', n)
-        n = re.sub('[^A-Za-z0-9% ]+', 'n', n)
-        n = re.sub('[^A-Za-z0-9 ]+', 'pc', n)
-        n = re.sub('[^A-Za-z0-9]+', '_', n)
-        new_names.append(n)
-    df.columns = new_names
+    # # Cleaning column names
+    # col_names = list(df.columns)
+    # new_names = []
+    # for n in col_names:
+    #     n = re.sub('[^A-Za-z0-9#% ]+', '', n)
+    #     n = re.sub('[^A-Za-z0-9% ]+', 'n', n)
+    #     n = re.sub('[^A-Za-z0-9 ]+', 'pc', n)
+    #     n = re.sub('[^A-Za-z0-9]+', '_', n)
+    #     new_names.append(n)
+    # df.columns = new_names
 
     # Step 1: Tranformation for stationarity d
     # Here features are everything except for the date
@@ -336,7 +336,7 @@ df_air_q = pd.read_csv("AirQualityUCI.csv")
 
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
-Model_Data = algo(df=google_medium, target="Close", max_lag=20, stationarity_method = 1, test_size=0.2)
+Model_Data = algo(df=df_air_q, target="CO(GT)", max_lag=20, stationarity_method = 1, test_size=0.2)
 
 print(Model_Data.summary)
 

@@ -40,7 +40,9 @@ sun_y_test = Model_Data.test_y
 sun_x_test = Model_Data.test_x
 sun_MAE_train = Model_Data.MAE["train"]
 sun_MAE_test = Model_Data.MAE["test"]
+sun_fin_model = Model_Data.fin_model
 
+sun_model_params = list(sun_fin_model.params.index)
 
 total_n_features = len(list(sun_x_train.columns))
 # Defining FRUFS model with k=maximum features
@@ -58,7 +60,12 @@ FRUFS_Loop = {"MAE Train":[], "MAE Test":[], "Feature %":[]}
 for n in list(range(1, total_n_features+1)):
     pruned_df_cut =  pruned_df.iloc[:,:n]
     # Training the model on the features selected by FRUFS
-    frufs_model = AutoReg(sun_y_train, lags=0, exog=pruned_df_cut).fit()
+    # Check whether the Sun Model has a constant or not
+    if "const" in sun_model_params:
+        frufs_model = AutoReg(sun_y_train, lags=0, exog=pruned_df_cut).fit()
+    else:
+        frufs_model = AutoReg(sun_y_train, lags=0, exog=pruned_df_cut, trend="n").fit()
+
     # Calculating MAE train (.sqeeze is reuired when sun_y is saved as a DF and not series)
     MAE_train = np.nanmean(abs(frufs_model.predict() - sun_y_train.squeeze()))
 
