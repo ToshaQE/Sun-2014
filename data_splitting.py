@@ -252,7 +252,7 @@ def algo(df, target, max_lag, test_size):
 
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
-Model_Data = algo(df=df_air_q, target="meantemp", max_lag=20, test_size=0.2)
+Model_Data = algo(df=aapl_medium, target="Close", max_lag=20, test_size=0.2)
 
 print(Model_Data.summary)
 
