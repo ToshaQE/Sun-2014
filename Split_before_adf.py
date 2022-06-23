@@ -69,44 +69,57 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 
     # Step 1: Tranformation for stationarity d
     # Here features are everything except for the date
-    features = [n for n in list(df.columns) if n != "Date"]
-    
-    df_copy = df.copy()
-
-    for feature in features:
-        result = adfuller(df[feature], autolag="t-stat")
-        counter = 0
-        if stationarity_method == 0:
-            while result[1] >= 0.01:
-                df[feature] = df[feature] - df[feature].shift(1)
-                #df_small.dropna()
-                counter += 1
-                #dropna(inplace=False) because it drops one observation for each feature
-                result = adfuller(df.dropna()[feature], autolag="t-stat")
-            print(f'Order of integration for feature "{feature}" is {counter}')
-        elif stationarity_method == 1:
-            while result[1] >= 0.01:
-                feature_differenced = np.log(df[feature]) - np.log(df[feature].shift(1))
-                na_count = feature_differenced.isna().sum()
-                # If NA count is greater than 1 (1 is caused by shifiting the series) it is likely that original series contains 0s
-                # Hence we add a constant to the series and only then apply log tranformations 
-                if na_count > 1:
-                    feature_with_constant = df[feature] + 1
-                    feature_differenced = np.log(feature_with_constant) - np.log(feature_with_constant.shift(1))
-                df[feature] = feature_differenced
-                #df_small.dropna()
-                counter += 1
-                #dropna(inplace=False) because it drops one observation for each feature
-                result = adfuller(df.dropna()[feature], autolag="t-stat")
-            print(f'Order of integration for feature "{feature}" is {counter}')
-
-    df.dropna(inplace=True)
-    df.reset_index(drop=True, inplace=True)
-
     feature_df = df.loc[:, ~df.columns.isin([target, "Date"])]
     target_df = df.loc[:, target]
 
-    X_train, X_test, y_train, y_test = train_test_split(feature_df, target_df, test_size=test_size, shuffle=False) 
+    X_train, X_test, y_train, y_test = train_test_split(feature_df, target_df, test_size=test_size, shuffle=False)
+    
+
+    staionarity_df = pd.concat([y_train, X_train], axis=1)
+
+    features = list(staionarity_df.columns)
+
+    # features = [n for n in list(X_train.columns) if n != "Date"]
+    
+    # df_copy = df[features].copy()
+
+    orders_of_integ = {}
+
+    for feature in features:
+        result = adfuller(staionarity_df[feature], autolag="t-stat")
+        counter = 0
+        if stationarity_method == 0:
+            while result[1] >= 0.01:
+                staionarity_df[feature] = staionarity_df[feature] - staionarity_df[feature].shift(1)
+                #df_small.dropna()
+                counter += 1
+                #dropna(inplace=False) because it drops one observation for each feature
+                result = adfuller(staionarity_df.dropna()[feature], autolag="t-stat")
+            print(f'Order of integration for feature "{feature}" is {counter}')
+            orders_of_integ[feature] = counter
+        elif stationarity_method == 1:
+            feature_logged = np.log(staionarity_df[feature])
+            na_count = feature_logged.isna().sum()
+            # If NA count is greater than 1 (1 is caused by shifiting the series) it is likely that original series contains 0s
+            # Hence we add a constant to the series and only then apply log tranformations 
+            if na_count > 1:
+                feature_with_constant = staionarity_df[feature] + 1
+                feature_logged = np.log(feature_with_constant)
+            while result[1] >= 0.01:
+                feature_differenced = feature_logged.diff()
+                staionarity_df[feature] = feature_differenced
+                #df_small.dropna()
+                counter += 1
+                #dropna(inplace=False) because it drops one observation for each feature
+                result = adfuller(staionarity_df.dropna()[feature], autolag="t-stat")
+            print(f'Order of integration for feature "{feature}" is {counter}')
+            orders_of_integ[feature] = counter
+
+    staionarity_df.dropna(inplace=True)
+    staionarity_df.reset_index(drop=True, inplace=True)
+
+    y_train = staionarity_df[target]
+    X_train = staionarity_df[[n for n in list(staionarity_df.columns) if n != target]]
 
     # Step 2: Building a univariate model and finding the optimal l
     BICs = []
@@ -243,6 +256,40 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 
         y_pred_in = fin_model.predict()
         MAE_train = np.nanmean(abs(y_pred_in - y_train_m))
+
+
+        # Stationarising test data
+        stationarity_df_test = pd.concat([y_test, X_test], axis=1)
+        features = list(stationarity_df_test.columns)
+
+        if stationarity_method == 0:
+            for feature in features:
+                if orders_of_integ[feature] == 0:
+                    continue
+                else:
+                    order = orders_of_integ[feature]
+                    integr_list = list(range(order, order+1))
+                    for o in integr_list:
+                        stationarity_df_test[feature] = stationarity_df_test[feature].diff()
+
+
+                        
+        # elif stationarity_method == 1:
+        #     for feature in features:
+        #         if orders_of_integ[feature] == 0:
+        #             continue
+        #         else:
+        #             order = orders_of_integ[feature]
+        #             integr_list = list(range(order, order+1))
+        #             for o in integr_list:
+        #                 stationarity_df_test[feature] = stationarity_df_test[feature].diff()
+
+
+        stationarity_df_test.dropna(inplace=True)
+        stationarity_df_test.reset_index(drop=True, inplace=True)
+
+        y_test = stationarity_df_test[target]
+        X_test = stationarity_df_test[[n for n in list(stationarity_df_test.columns) if n != target]]
 
         # Formatting the test dataframes to suit the model's exog format
         test_data = []

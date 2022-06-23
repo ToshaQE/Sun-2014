@@ -71,11 +71,12 @@ def algo(df, target, max_lag, stationarity_method, test_size):
     # Here features are everything except for the date
     features = [n for n in list(df.columns) if n != "Date"]
     
-    df_copy = df.copy()
+    df_copy = df[features].copy()
 
     for feature in features:
         result = adfuller(df[feature], autolag="t-stat")
         counter = 0
+        orders_of_integ = {}
         if stationarity_method == 0:
             while result[1] >= 0.01:
                 df[feature] = df[feature] - df[feature].shift(1)
@@ -84,6 +85,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
                 #dropna(inplace=False) because it drops one observation for each feature
                 result = adfuller(df.dropna()[feature], autolag="t-stat")
             print(f'Order of integration for feature "{feature}" is {counter}')
+            orders_of_integ[feature] = counter
         elif stationarity_method == 1:
             while result[1] >= 0.01:
                 feature_differenced = np.log(df[feature]) - np.log(df[feature].shift(1))
@@ -99,6 +101,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
                 #dropna(inplace=False) because it drops one observation for each feature
                 result = adfuller(df.dropna()[feature], autolag="t-stat")
             print(f'Order of integration for feature "{feature}" is {counter}')
+            orders_of_integ[feature] = counter
 
     df.dropna(inplace=True)
     df.reset_index(drop=True, inplace=True)
@@ -338,7 +341,7 @@ df_air_q = pd.read_csv("AirQualityUCI.csv")
 
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
-Model_Data = algo(df=aapl_medium, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
+Model_Data = algo(df=df_air_q, target="CO(GT)", max_lag=20, stationarity_method = 1, test_size=0.2)
 
 print(Model_Data.summary)
 
