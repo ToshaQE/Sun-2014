@@ -405,7 +405,7 @@ df_air_q = pd.read_csv("AirQualityUCI.csv")
 
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
-Model_Data = algo(df=aapl_long, target="Close", max_lag=20, stationarity_method = 1, test_size=0.2)
+Model_Data = algo(df=aapl_long, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
 
 print(Model_Data.summary)
 

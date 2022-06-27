@@ -9,6 +9,7 @@ from statsmodels.tools.eval_measures import rmse, aic
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.stattools import grangercausalitytests
+import statsmodels.api as sm
 import pickle
 from sklearn.model_selection import train_test_split
 import re
@@ -58,16 +59,16 @@ from Sun_Model_Class import Sun_Model
 
 def algo(df, target, max_lag, stationarity_method, test_size):
 
-    # # Cleaning column names
-    # col_names = list(df.columns)
-    # new_names = []
-    # for n in col_names:
-    #     n = re.sub('[^A-Za-z0-9#% ]+', '', n)
-    #     n = re.sub('[^A-Za-z0-9% ]+', 'n', n)
-    #     n = re.sub('[^A-Za-z0-9 ]+', 'pc', n)
-    #     n = re.sub('[^A-Za-z0-9]+', '_', n)
-    #     new_names.append(n)
-    # df.columns = new_names
+    # Cleaning column names
+    col_names = list(df.columns)
+    new_names = []
+    for n in col_names:
+        n = re.sub('[^A-Za-z0-9#% ]+', '', n)
+        n = re.sub('[^A-Za-z0-9% ]+', 'n', n)
+        n = re.sub('[^A-Za-z0-9 ]+', 'pc', n)
+        n = re.sub('[^A-Za-z0-9]+', '_', n)
+        new_names.append(n)
+    df.columns = new_names
 
     # Step 1: Tranformation for stationarity d
     # Here features are everything except for the date
@@ -138,6 +139,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
     #Error Correction Model
     cointegr_dict = {}
     ECM_residuals = {}
+    ECM_OLSs = {}
     x_features = list(X_train.columns)
 
     for x_feature in x_features:
@@ -145,9 +147,13 @@ def algo(df, target, max_lag, stationarity_method, test_size):
             E_G = engle_granger(yx_train_original[target], yx_train_original[x_feature], trend = "n", method = "t-stat")
             if E_G.pvalue < 0.05:
                 cointegr_dict[x_feature] = 1
-                ECM_1 = OLS(yx_train_original[target], yx_train_original[x_feature]).fit(cov_type=("HC0"))
+                ECM_X_const = sm.add_constant(yx_train_original[x_feature])
+                ECM_1 = OLS(yx_train_original[target], ECM_X_const, hasconst=True).fit(cov_type=("HC0"))
                 ECM_res = ECM_1.resid
+                ECM_res = ECM_res.shift(1).dropna().reset_index(drop=True)
+                ECM_res = ECM_res.iloc[max_lag:].reset_index(drop=True)
                 ECM_residuals[x_feature] = ECM_res
+                ECM_OLSs[x_feature] = ECM_1
 
             # ECM_1 = OLS(yx_train_original[target], yx_train_original[feature]).fit(cov_type=("HC0"))
             # ECM_res = ECM_1.resid
@@ -162,6 +168,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 
 
     # Step 2: Building a univariate model and finding the optimal l
+
     BICs = []
     for i in list(range(max_lag)):
         model = AutoReg(y_train, lags=i).fit()
@@ -184,7 +191,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         y_lags_df[columns_y[i]] = y_train.shift(i+1)
 
     # Truncating lags of y at the maximum lag length
-    y_lags_df.fillna(1, inplace=True)
+    # y_lags_df.fillna(1, inplace=True)
     y_lags_df = y_lags_df.iloc[max_lag:,:]
     y_lags_df.reset_index(drop=True, inplace=True)
 
@@ -201,14 +208,14 @@ def algo(df, target, max_lag, stationarity_method, test_size):
     feature_n_dfs_merge = [y_lags_df]
     n_lags_for_xi = {}
     
-    for n in list(range(len(Xs))):
+    for x in Xs:
         columns = []
         for i in list(range(1, max_lag+1)):
-            columns.append(Xs[n]+".L"+str(i))
+            columns.append(x + ".L"+str(i))
 
         feature_n_df = pd.DataFrame(columns=columns)
         for i in list(range(max_lag)):
-            feature_n_df[columns[i]] = X_train[Xs[n]].shift(i+1)
+            feature_n_df[columns[i]] = X_train[x].shift(i+1)
 
         # NAs filled with are later automatically truncated by the AutoReg
         feature_n_df.fillna(1, inplace=True)
@@ -232,18 +239,23 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         y_and_x_lags_df = y_and_x_lags_df.iloc[:,:min_bic_ind_aug+len(list(y_lags_df.columns))+1]
         y_and_x_lags_df.reset_index(drop=True, inplace=True)
 
+        # Adding ECM residual to the feature n dataset if it appears to be cointegrated with the target
+        if x in list(ECM_residuals.keys()):
+            ECM_res_name = x + "_ECM_Res.L1"
+            y_and_x_lags_df[ECM_res_name] = ECM_residuals[x]
+
         model = AutoReg(y_train_m, lags=0, exog=y_and_x_lags_df).fit()
 
-        gr_test_df = pd.concat([X_train[Xs[n]], y_train], axis=1)
+        gr_test_df = pd.concat([X_train[x], y_train], axis=1)
         granger_p_stat = grangercausalitytests(gr_test_df, maxlag=[min_bic_ind_aug+1])[min_bic_ind_aug+1][0]['params_ftest'][1]
         if granger_p_stat >= 0.05:
-            aug_models[Xs[n]] = model
-            feature_n_dfs[Xs[n]] = feature_n_df1
+            aug_models[x] = model
+            feature_n_dfs[x] = feature_n_df1
             feature_n_dfs_merge.append(y_and_x_lags_df.iloc[:,len(list(y_lags_df.columns)):])
-            n_lags_for_xi[Xs[n]] = min_bic_ind_aug + 1
+            n_lags_for_xi[x] = min_bic_ind_aug + 1
             #model.summary()
         elif granger_p_stat >= 0.01:
-            print(f'\n\nGranger causality from "{target}" to "{Xs[n]}" can not be rejected with a p-value={granger_p_stat:.3}')
+            print(f'\n\nGranger causality from "{target}" to "{x}" can not be rejected with a p-value={granger_p_stat:.3}')
         else:
             continue
 
@@ -292,11 +304,12 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         names_of_sig_vars = [n for n in list(fin_model.params.index) if n!= "const"]
 
 
-
-
         y_pred_in = fin_model.predict()
         MAE_train = np.nanmean(abs(y_pred_in - y_train_m))
 
+        # Coppying data for ECM imlplementation
+        y_test_non_stat = y_test.copy()
+        X_test_non_stat = X_test.copy()
 
         # Stationarising test data
         stationarity_df_test = pd.concat([y_test, X_test], axis=1)
@@ -363,7 +376,10 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 
         test_data.append(y_lags_df)
 
-        #Formatting Xs    
+
+        #Formatting Xs and implementing ECM on the test data
+        Cointegrated_Xs = list(ECM_residuals.keys())
+
         for x_name, lag_len in n_lags_for_xi.items():
             columns = []
             for i in list(range(1, lag_len+1)):
@@ -375,6 +391,16 @@ def algo(df, target, max_lag, stationarity_method, test_size):
             
             feature_x_df = feature_x_df.iloc[max_sel_lag:,:]
             feature_x_df.reset_index(drop=True, inplace=True)
+
+            if x_name in Cointegrated_Xs:
+                ECM_OLS = ECM_OLSs[x_name]
+                X_test_ECM = sm.add_constant(X_test_non_stat[x_name])
+                y_ECM_pred = ECM_OLS.predict(X_test_ECM)
+                y_test_ECM_res = y_ECM_pred - y_test_non_stat
+                y_test_ECM_res = y_test_ECM_res.shift(1)
+                y_test_ECM_res = y_test_ECM_res.iloc[max_sel_lag:]
+                y_test_ECM_res.reset_index(drop=True, inplace=True)
+                feature_x_df[x_name + "_ECM_Res.L1"] = y_test_ECM_res
             
             test_data.append(feature_x_df)
     
@@ -433,7 +459,7 @@ df_air_q = pd.read_csv("AirQualityUCI.csv")
 
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
-Model_Data = algo(df=aapl_medium, target="Close", max_lag=20, stationarity_method = 1, test_size=0.2)
+Model_Data = algo(df=aapl_long, target="Close", max_lag=20, stationarity_method = 1, test_size=0.05)
 
 print(Model_Data.summary)
 
@@ -446,6 +472,8 @@ filename = 'Sun_Model_Data'
 outfile = open(filename,'wb')
 pickle.dump(Model_Data,outfile)
 outfile.close()
+
+apple_long_evoML = pd.concat([Model_Data.y_train])
 
 # {'train': 1.2125139241871459, 'test': 1.199242993289765}
 
