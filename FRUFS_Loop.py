@@ -103,6 +103,8 @@ FRUFS_Vis = FRUFS_Long.loc[FRUFS_Long['variable'].isin(["MAE Train % Change", "M
 ax = sns.lineplot(x='Feature %', y='value', hue='variable', 
              data=FRUFS_Vis)
 
+ax.invert_xaxis()
+
 ax.set(xlabel='% of Features returned by FRUFS', ylabel='% Change over the original scores')
 
 

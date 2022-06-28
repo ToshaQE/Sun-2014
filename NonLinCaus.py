@@ -103,7 +103,7 @@ data_test = data[7000:, :]
 granger_df_train = granger_df.iloc[:2000,:].to_numpy()
 granger_df_test = granger_df.iloc[2000:,:].to_numpy()
 
-results_ARIMA = nlc.nonlincausalityARIMA(x=granger_df_train, maxlag=[1,2], x_test=granger_df_test)
+results_ARIMA = nlc.nonlincausalityARIMA(x=granger_df_train, maxlag=[1, 10], x_test=granger_df_test)
 
 # results_ARIMA = nlc.nonlincausalityARIMA(x=data_train, maxlag=[1,2], x_test=data_test)
 

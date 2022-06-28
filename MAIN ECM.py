@@ -52,6 +52,8 @@ import plotly.express as px
 from Sun_Model_Class import Sun_Model
 # logging.INFO
 
+import pmdarima as pmd
+
 
 
 
@@ -266,7 +268,11 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         # #model.summary()
     
     try:
+        
         feature_n_dfs_merge = pd.concat(feature_n_dfs_merge, axis=1)
+
+        if len(feature_n_dfs_merge) == 0:
+                    print("\n\n\n\nZero lags of y have been selected and H0 of reverse causlity could not be rejected for any X.\n\n\n\n")
 
         fin_model = AutoReg(y_train_m, lags=0, exog=feature_n_dfs_merge).fit()
 
@@ -293,7 +299,10 @@ def algo(df, target, max_lag, stationarity_method, test_size):
                 feature_n_dfs_merge.pop(least_sig_var)
                 # If const has been dropped, we run Autoreg w/o it
                 if const_dropped:
-                    fin_model = AutoReg(y_train_m, lags=0, exog=feature_n_dfs_merge, trend="n").fit()
+                    try:
+                        fin_model = AutoReg(y_train_m, lags=0, exog=feature_n_dfs_merge, trend="n").fit()
+                    except ValueError:
+                        print("\n\n\n\nNo coefficients appear to be significant in the estimated model.\n\n\n\n")
                 else:
                     fin_model = AutoReg(y_train_m, lags=0, exog=feature_n_dfs_merge).fit()
 
@@ -458,8 +467,14 @@ df_air_q = pd.read_csv("AirQualityUCI.csv")
 # pd.DataFrame.to_csv(df_air_q, "df_air_q_no_date.csv", index=True)
 
 
+airpassengers_df = pmd.datasets.load_airpassengers(as_series = True)
+msft_pmd_df = pmd.datasets.load_msft()
+msft_pmd_df = msft_pmd_df.iloc[:,:-1]
+
+
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
-Model_Data = algo(df=aapl_long, target="Close", max_lag=20, stationarity_method = 1, test_size=0.2)
+
+Model_Data = algo(df=msft_pmd_df, target="High", max_lag=20, stationarity_method = 0, test_size=0.2)
 
 print(Model_Data.summary)
 
