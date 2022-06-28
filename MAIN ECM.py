@@ -459,7 +459,7 @@ df_air_q = pd.read_csv("AirQualityUCI.csv")
 
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
-Model_Data = algo(df=aapl_long, target="Close", max_lag=20, stationarity_method = 1, test_size=0.05)
+Model_Data = algo(df=aapl_long, target="Close", max_lag=20, stationarity_method = 1, test_size=0.2)
 
 print(Model_Data.summary)
 
@@ -473,7 +473,7 @@ outfile = open(filename,'wb')
 pickle.dump(Model_Data,outfile)
 outfile.close()
 
-apple_long_evoML = pd.concat([Model_Data.y_train])
+# apple_long_evoML = pd.concat([Model_Data.y_train])
 
 # {'train': 1.2125139241871459, 'test': 1.199242993289765}
 
