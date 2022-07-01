@@ -79,13 +79,18 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 
     X_train, X_test, y_train, y_test = train_test_split(feature_df, target_df, test_size=test_size, shuffle=False)
     
+    # Resetting index for later modelling purposes
+    X_test.reset_index(drop=True, inplace=True)
+    y_test.reset_index(drop=True, inplace=True)
 
+    # Dataframe to perform ADF test
     staionarity_df = pd.concat([y_train, X_train], axis=1)
 
     features = list(staionarity_df.columns)
 
     # features = [n for n in list(X_train.columns) if n != "Date"]
     
+    # Coppying dataframes for stationarity and back-transformation purposes
     yx_train_original = staionarity_df.copy()
     y_original = y_train.copy()
     y_logged = np.log(y_original)
@@ -461,6 +466,40 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         y_pred_out = fin_model.predict(start=first_oos_ind, end=last_oos_ind, exog_oos=test_data)
         y_pred_out.reset_index(drop=True, inplace=True)
         MAE_test = np.nanmean(abs(y_pred_out - y_test))
+
+
+
+        if stationarity_method == 0:
+            y_pred_out_delog = y_pred_out.copy()
+            y_pred_out_delog.loc[-1] = y_test_non_stat.iloc[max_sel_lag-1]
+            y_pred_out_delog.index = y_pred_out_delog.index + 1
+            y_pred_out_delog = y_pred_out_delog.sort_index()
+            y_pred_out_delog = y_pred_out_delog.cumsum()
+
+            y_test_non_stat_delog = y_test_non_stat.copy()
+            y_test_non_stat_delog = y_test_non_stat_delog.iloc[max_sel_lag-1:]
+            y_test_non_stat_delog.reset_index(drop=True, inplace=True)
+            
+            MAE_test_delog = np.nanmean(abs(y_pred_out_delog - y_test_non_stat_delog))
+
+        elif stationarity_method == 1:
+            y_train_m_delog = y_train_m.copy()
+            y_train_m_delog.loc[-1] = y_logged.iloc[max_lag]
+            y_train_m_delog.index = y_train_m_delog.index + 1
+            y_train_m_delog = y_train_m_delog.sort_index()
+            y_train_m_delog = np.exp(y_train_m_delog.cumsum())
+
+
+            y_pred_in_delog = y_pred_in.copy()
+            y_pred_in_delog.loc[-1] = y_logged.iloc[max_lag]
+            y_pred_in_delog.index = y_pred_in_delog.index + 1
+            y_pred_in_delog = y_pred_in_delog.sort_index()
+            y_pred_in_delog = np.exp(y_pred_in_delog.cumsum())
+
+            MAE_train_delog = np.nanmean(abs(y_pred_in_delog - y_train_m_delog))
+
+
+
         
         MAE = {"train": MAE_train, "test": MAE_test}
         logging.info("Check")
