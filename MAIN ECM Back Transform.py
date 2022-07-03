@@ -62,15 +62,15 @@ import pmdarima as pmd
 def algo(df, target, max_lag, stationarity_method, test_size):
 
     # Cleaning column names
-    col_names = list(df.columns)
-    new_names = []
-    for n in col_names:
-        n = re.sub('[^A-Za-z0-9#% ]+', '', n)
-        n = re.sub('[^A-Za-z0-9% ]+', 'n', n)
-        n = re.sub('[^A-Za-z0-9 ]+', 'pc', n)
-        n = re.sub('[^A-Za-z0-9]+', '_', n)
-        new_names.append(n)
-    df.columns = new_names
+    # col_names = list(df.columns)
+    # new_names = []
+    # for n in col_names:
+    #     n = re.sub('[^A-Za-z0-9#% ]+', '', n)
+    #     n = re.sub('[^A-Za-z0-9% ]+', 'n', n)
+    #     n = re.sub('[^A-Za-z0-9 ]+', 'pc', n)
+    #     n = re.sub('[^A-Za-z0-9]+', '_', n)
+    #     new_names.append(n)
+    # df.columns = new_names
 
     # Step 1: Tranformation for stationarity d
     # Here features are everything except for the date
@@ -324,39 +324,41 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         y_pred_in = fin_model.predict()
         MAE_train = np.nanmean(abs(y_pred_in - y_train_m))
 
-        # Calculating train scores in the original scale
+        if orders_of_integ[target] > 0:
 
-        if stationarity_method == 0:
-            y_train_m_delog = y_train_m.copy()
-            y_train_m_delog.loc[-1] = y_original.iloc[max_lag]
-            y_train_m_delog.index = y_train_m_delog.index + 1
-            y_train_m_delog = y_train_m_delog.sort_index()
-            y_train_m_delog = y_train_m_delog.cumsum()
+            # Calculating train scores in the original scale
 
-
-            y_pred_in_delog = y_pred_in.copy()
-            y_pred_in_delog.loc[-1] = y_original.iloc[max_lag]
-            y_pred_in_delog.index = y_pred_in_delog.index + 1
-            y_pred_in_delog = y_pred_in_delog.sort_index()
-            y_pred_in_delog = y_pred_in_delog.cumsum()
-
-            MAE_train_delog = np.nanmean(abs(y_pred_in_delog - y_train_m_delog))
-
-        elif stationarity_method == 1:
-            y_train_m_delog = y_train_m.copy()
-            y_train_m_delog.loc[-1] = y_logged.iloc[max_lag]
-            y_train_m_delog.index = y_train_m_delog.index + 1
-            y_train_m_delog = y_train_m_delog.sort_index()
-            y_train_m_delog = np.exp(y_train_m_delog.cumsum())
+            if stationarity_method == 0:
+                y_train_m_delog = y_train_m.copy()
+                y_train_m_delog.loc[-1] = y_original.iloc[max_lag]
+                y_train_m_delog.index = y_train_m_delog.index + 1
+                y_train_m_delog = y_train_m_delog.sort_index()
+                y_train_m_delog = y_train_m_delog.cumsum()
 
 
-            y_pred_in_delog = y_pred_in.copy()
-            y_pred_in_delog.loc[-1] = y_logged.iloc[max_lag]
-            y_pred_in_delog.index = y_pred_in_delog.index + 1
-            y_pred_in_delog = y_pred_in_delog.sort_index()
-            y_pred_in_delog = np.exp(y_pred_in_delog.cumsum())
+                y_pred_in_delog = y_pred_in.copy()
+                y_pred_in_delog.loc[-1] = y_original.iloc[max_lag]
+                y_pred_in_delog.index = y_pred_in_delog.index + 1
+                y_pred_in_delog = y_pred_in_delog.sort_index()
+                y_pred_in_delog = y_pred_in_delog.cumsum()
 
-            MAE_train_delog = np.nanmean(abs(y_pred_in_delog - y_train_m_delog))
+                MAE_train_delog = np.nanmean(abs(y_pred_in_delog - y_train_m_delog))
+
+            elif stationarity_method == 1:
+                y_train_m_delog = y_train_m.copy()
+                y_train_m_delog.loc[-1] = y_logged.iloc[max_lag]
+                y_train_m_delog.index = y_train_m_delog.index + 1
+                y_train_m_delog = y_train_m_delog.sort_index()
+                y_train_m_delog = np.exp(y_train_m_delog.cumsum())
+
+
+                y_pred_in_delog = y_pred_in.copy()
+                y_pred_in_delog.loc[-1] = y_logged.iloc[max_lag]
+                y_pred_in_delog.index = y_pred_in_delog.index + 1
+                y_pred_in_delog = y_pred_in_delog.sort_index()
+                y_pred_in_delog = np.exp(y_pred_in_delog.cumsum())
+
+                MAE_train_delog = np.nanmean(abs(y_pred_in_delog - y_train_m_delog))
 
         # Coppying data for ECM imlplementation
         y_test_non_stat = y_test.copy()
@@ -469,39 +471,44 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         y_pred_out.reset_index(drop=True, inplace=True)
         MAE_test = np.nanmean(abs(y_pred_out - y_test))
 
+        if orders_of_integ[target] > 0:
 
-        # Calculating test scores in the original scale
-        if stationarity_method == 0:
-            y_pred_out_delog = y_pred_out.copy()
-            y_pred_out_delog.loc[-1] = y_test_non_stat.iloc[max_sel_lag]
-            y_pred_out_delog.index = y_pred_out_delog.index + 1
-            y_pred_out_delog = y_pred_out_delog.sort_index()
-            y_pred_out_delog = y_pred_out_delog.cumsum()
+            # Calculating test scores in the original scale
+            if stationarity_method == 0:
+                y_pred_out_delog = y_pred_out.copy()
+                y_pred_out_delog.loc[-1] = y_test_non_stat.iloc[max_sel_lag]
+                y_pred_out_delog.index = y_pred_out_delog.index + 1
+                y_pred_out_delog = y_pred_out_delog.sort_index()
+                y_pred_out_delog = y_pred_out_delog.cumsum()
 
-            y_test_non_stat_delog = y_test_non_stat.copy()
-            y_test_non_stat_delog = y_test_non_stat_delog.iloc[max_sel_lag:]
-            y_test_non_stat_delog.reset_index(drop=True, inplace=True)
-            
-            MAE_test_delog = np.nanmean(abs(y_pred_out_delog - y_test_non_stat_delog))
+                y_test_non_stat_delog = y_test_non_stat.copy()
+                y_test_non_stat_delog = y_test_non_stat_delog.iloc[max_sel_lag:]
+                y_test_non_stat_delog.reset_index(drop=True, inplace=True)
+                
+                MAE_test_delog = np.nanmean(abs(y_pred_out_delog - y_test_non_stat_delog))
 
-        elif stationarity_method == 1:
-            y_test_logged = np.log(y_test_non_stat)
-            y_pred_out_delog = y_pred_out.copy()
-            y_pred_out_delog.loc[-1] = y_test_logged.iloc[max_sel_lag]
-            y_pred_out_delog.index = y_pred_out_delog.index + 1
-            y_pred_out_delog = y_pred_out_delog.sort_index()
-            y_pred_out_delog = np.exp(y_pred_out_delog.cumsum())
+            elif stationarity_method == 1:
+                y_test_logged = np.log(y_test_non_stat)
+                y_pred_out_delog = y_pred_out.copy()
+                y_pred_out_delog.loc[-1] = y_test_logged.iloc[max_sel_lag]
+                y_pred_out_delog.index = y_pred_out_delog.index + 1
+                y_pred_out_delog = y_pred_out_delog.sort_index()
+                y_pred_out_delog = np.exp(y_pred_out_delog.cumsum())
 
-            y_test_non_stat_delog = y_test_logged.copy()
-            y_test_non_stat_delog = y_test_non_stat_delog.iloc[max_sel_lag:]
-            y_test_non_stat_delog.reset_index(drop=True, inplace=True)
-            y_test_non_stat_delog = np.exp(y_test_non_stat_delog)
+                y_test_non_stat_delog = y_test_logged.copy()
+                y_test_non_stat_delog = y_test_non_stat_delog.iloc[max_sel_lag:]
+                y_test_non_stat_delog.reset_index(drop=True, inplace=True)
+                y_test_non_stat_delog = np.exp(y_test_non_stat_delog)
 
-            MAE_test_delog = np.nanmean(abs(y_pred_out_delog - y_test_non_stat_delog))
+                MAE_test_delog = np.nanmean(abs(y_pred_out_delog - y_test_non_stat_delog))
+
+                MAE = {"train": MAE_train_delog, "test": MAE_test_delog}
+        else:
+            MAE = {"train": MAE_train, "test": MAE_test}
 
 
         
-        MAE = {"train": MAE_train, "test": MAE_test}
+        MAE_NonStat = {"train": MAE_train, "test": MAE_test}
         logging.info("Check")
 
         Model_Data = Sun_Model(fin_model, fin_model.summary(), aug_models, MAE,
@@ -537,7 +544,7 @@ google_long = df_google.iloc[:,:16]
 df_dehli = pd.read_csv("dehli_weather.csv")
 
 df_air_q = pd.read_csv("AirQualityUCI.csv")
-# df_air_q.drop("Date", axis=1, inplace=True)
+# df_air_q.drop("Date", axis=1, inplace=True) CO(GT)
 # pd.DataFrame.to_csv(df_air_q, "df_air_q_no_date.csv", index=True)
 
 
@@ -548,7 +555,7 @@ msft_pmd_df = msft_pmd_df.iloc[:,:-1]
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
 
-Model_Data = algo(df=aapl_medium, target="Close", max_lag=20, stationarity_method = 1, test_size=0.2)
+Model_Data = algo(df=df_air_q, target="CO(GT)", max_lag=20, stationarity_method = 0, test_size=0.2)
 
 apple_stat = pd.concat([Model_Data.train_y, Model_Data.train_x], axis=1)
 apple_stat.to_csv("aaple_stat.csv", index=True)
