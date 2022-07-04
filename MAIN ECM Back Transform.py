@@ -102,7 +102,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         result = adfuller(staionarity_df[feature], autolag="t-stat")
         counter = 0
         if stationarity_method == 0:
-            while result[1] >= 0.01:
+            while result[1] >= 0.05:
                 staionarity_df[feature] = staionarity_df[feature] - staionarity_df[feature].shift(1)
                 #df_small.dropna()
                 counter += 1
@@ -502,7 +502,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 
                 MAE_test_delog = np.nanmean(abs(y_pred_out_delog - y_test_non_stat_delog))
 
-                MAE = {"train": MAE_train_delog, "test": MAE_test_delog}
+            MAE = {"train": MAE_train_delog, "test": MAE_test_delog}
         else:
             MAE = {"train": MAE_train, "test": MAE_test}
 
@@ -555,7 +555,7 @@ msft_pmd_df = msft_pmd_df.iloc[:,:-1]
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
 
-Model_Data = algo(df=df_air_q, target="CO(GT)", max_lag=20, stationarity_method = 0, test_size=0.2)
+Model_Data = algo(df=aapl_medium, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
 
 apple_stat = pd.concat([Model_Data.train_y, Model_Data.train_x], axis=1)
 apple_stat.to_csv("aaple_stat.csv", index=True)
