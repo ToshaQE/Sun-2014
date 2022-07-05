@@ -102,7 +102,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         result = adfuller(staionarity_df[feature], autolag="t-stat")
         counter = 0
         if stationarity_method == 0:
-            while result[1] >= 0.05:
+            while result[1] >= 0.01:
                 staionarity_df[feature] = staionarity_df[feature] - staionarity_df[feature].shift(1)
                 #df_small.dropna()
                 counter += 1
@@ -329,36 +329,36 @@ def algo(df, target, max_lag, stationarity_method, test_size):
             # Calculating train scores in the original scale
 
             if stationarity_method == 0:
-                y_train_m_delog = y_train_m.copy()
-                y_train_m_delog.loc[-1] = y_original.iloc[max_lag]
-                y_train_m_delog.index = y_train_m_delog.index + 1
-                y_train_m_delog = y_train_m_delog.sort_index()
-                y_train_m_delog = y_train_m_delog.cumsum()
+                y_train_m_destat = y_train_m.copy()
+                y_train_m_destat.loc[-1] = y_original.iloc[max_lag]
+                y_train_m_destat.index = y_train_m_destat.index + 1
+                y_train_m_destat = y_train_m_destat.sort_index()
+                y_train_m_destat = y_train_m_destat.cumsum()
 
 
-                y_pred_in_delog = y_pred_in.copy()
-                y_pred_in_delog.loc[-1] = y_original.iloc[max_lag]
-                y_pred_in_delog.index = y_pred_in_delog.index + 1
-                y_pred_in_delog = y_pred_in_delog.sort_index()
-                y_pred_in_delog = y_pred_in_delog.cumsum()
+                y_pred_in_destat = y_pred_in.copy()
+                y_pred_in_destat.loc[-1] = y_original.iloc[max_lag]
+                y_pred_in_destat.index = y_pred_in_destat.index + 1
+                y_pred_in_destat = y_pred_in_destat.sort_index()
+                y_pred_in_destat = y_pred_in_destat.cumsum()
 
-                MAE_train_delog = np.nanmean(abs(y_pred_in_delog - y_train_m_delog))
+                MAE_train_destat = np.nanmean(abs(y_pred_in_destat - y_train_m_destat))
 
             elif stationarity_method == 1:
-                y_train_m_delog = y_train_m.copy()
-                y_train_m_delog.loc[-1] = y_logged.iloc[max_lag]
-                y_train_m_delog.index = y_train_m_delog.index + 1
-                y_train_m_delog = y_train_m_delog.sort_index()
-                y_train_m_delog = np.exp(y_train_m_delog.cumsum())
+                y_train_m_destat = y_train_m.copy()
+                y_train_m_destat.loc[-1] = y_logged.iloc[max_lag]
+                y_train_m_destat.index = y_train_m_destat.index + 1
+                y_train_m_destat = y_train_m_destat.sort_index()
+                y_train_m_destat = np.exp(y_train_m_destat.cumsum())
 
 
-                y_pred_in_delog = y_pred_in.copy()
-                y_pred_in_delog.loc[-1] = y_logged.iloc[max_lag]
-                y_pred_in_delog.index = y_pred_in_delog.index + 1
-                y_pred_in_delog = y_pred_in_delog.sort_index()
-                y_pred_in_delog = np.exp(y_pred_in_delog.cumsum())
+                y_pred_in_destat = y_pred_in.copy()
+                y_pred_in_destat.loc[-1] = y_logged.iloc[max_lag]
+                y_pred_in_destat.index = y_pred_in_destat.index + 1
+                y_pred_in_destat = y_pred_in_destat.sort_index()
+                y_pred_in_destat = np.exp(y_pred_in_destat.cumsum())
 
-                MAE_train_delog = np.nanmean(abs(y_pred_in_delog - y_train_m_delog))
+                MAE_train_destat = np.nanmean(abs(y_pred_in_destat - y_train_m_destat))
 
         # Coppying data for ECM imlplementation
         y_test_non_stat = y_test.copy()
@@ -403,11 +403,6 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         stationarity_df_test.dropna(inplace=True)
         stationarity_df_test.reset_index(drop=True, inplace=True)
 
-        y_test = stationarity_df_test[target]
-        X_test = stationarity_df_test[[n for n in list(stationarity_df_test.columns) if n != target]]
-
-        # Formatting the test dataframes to suit the model's exog format
-        test_data = []
 
         #Finding the maximum seleceted lag length to truncate the test data appropriately
         selected_lag_lens = []
@@ -475,47 +470,52 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 
             # Calculating test scores in the original scale
             if stationarity_method == 0:
-                y_pred_out_delog = y_pred_out.copy()
-                y_pred_out_delog.loc[-1] = y_test_non_stat.iloc[max_sel_lag]
-                y_pred_out_delog.index = y_pred_out_delog.index + 1
-                y_pred_out_delog = y_pred_out_delog.sort_index()
-                y_pred_out_delog = y_pred_out_delog.cumsum()
+                y_pred_out_destat = y_pred_out.copy()
+                y_pred_out_destat.loc[-1] = y_test_non_stat.iloc[max_sel_lag]
+                y_pred_out_destat.index = y_pred_out_destat.index + 1
+                y_pred_out_destat = y_pred_out_destat.sort_index()
+                y_pred_out_destat = y_pred_out_destat.cumsum()
 
-                y_test_non_stat_delog = y_test_non_stat.copy()
-                y_test_non_stat_delog = y_test_non_stat_delog.iloc[max_sel_lag:]
-                y_test_non_stat_delog.reset_index(drop=True, inplace=True)
+                y_test_non_stat_destat = y_test_non_stat.copy()
+                y_test_non_stat_destat = y_test_non_stat_destat.iloc[max_sel_lag:]
+                y_test_non_stat_destat.reset_index(drop=True, inplace=True)
                 
-                MAE_test_delog = np.nanmean(abs(y_pred_out_delog - y_test_non_stat_delog))
+                MAE_test_destat = np.nanmean(abs(y_pred_out_destat - y_test_non_stat_destat))
 
             elif stationarity_method == 1:
                 y_test_logged = np.log(y_test_non_stat)
-                y_pred_out_delog = y_pred_out.copy()
-                y_pred_out_delog.loc[-1] = y_test_logged.iloc[max_sel_lag]
-                y_pred_out_delog.index = y_pred_out_delog.index + 1
-                y_pred_out_delog = y_pred_out_delog.sort_index()
-                y_pred_out_delog = np.exp(y_pred_out_delog.cumsum())
+                y_pred_out_destat = y_pred_out.copy()
+                y_pred_out_destat.loc[-1] = y_test_logged.iloc[max_sel_lag]
+                y_pred_out_destat.index = y_pred_out_destat.index + 1
+                y_pred_out_destat = y_pred_out_destat.sort_index()
+                y_pred_out_destat = np.exp(y_pred_out_destat.cumsum())
 
-                y_test_non_stat_delog = y_test_logged.copy()
-                y_test_non_stat_delog = y_test_non_stat_delog.iloc[max_sel_lag:]
-                y_test_non_stat_delog.reset_index(drop=True, inplace=True)
-                y_test_non_stat_delog = np.exp(y_test_non_stat_delog)
+                y_test_non_stat_destat = y_test_logged.copy()
+                y_test_non_stat_destat = y_test_non_stat_destat.iloc[max_sel_lag:]
+                y_test_non_stat_destat.reset_index(drop=True, inplace=True)
+                y_test_non_stat_destat = np.exp(y_test_non_stat_destat)
 
-                MAE_test_delog = np.nanmean(abs(y_pred_out_delog - y_test_non_stat_delog))
+                MAE_test_destat = np.nanmean(abs(y_pred_out_destat - y_test_non_stat_destat))
 
-            MAE = {"train": MAE_train_delog, "test": MAE_test_delog}
+            MAE = {"train": MAE_train_destat, "test": MAE_test_destat}
         else:
             MAE = {"train": MAE_train, "test": MAE_test}
+            y_train_m_destat = y_train_m
+            y_test_non_stat_destat = y_test
+
 
 
         
-        MAE_NonStat = {"train": MAE_train, "test": MAE_test}
+        MAE_nonstat = {"train": MAE_train, "test": MAE_test}
         logging.info("Check")
+        destat_data = {"y_train": y_train_m_destat, "y_test": y_test_non_stat_destat,
+                        "stationarity_method": stationarity_method,
+                        "y_integ_order": orders_of_integ[target]}
 
         Model_Data = Sun_Model(fin_model, fin_model.summary(), aug_models, MAE,
                                 y_train_m, feature_n_dfs_merge,
                                 y_test, test_data,
-                                y_pred_out)
-
+                                y_pred_out, destat_data)
         #return fin_model, aug_models, feature_n_dfs, feature_n_dfs_merge, MAE, Sun_Model1
         return Model_Data
     except ValueError:
@@ -555,7 +555,7 @@ msft_pmd_df = msft_pmd_df.iloc[:,:-1]
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
 
-Model_Data = algo(df=aapl_medium, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
+Model_Data = algo(df=aapl_long, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
 
 apple_stat = pd.concat([Model_Data.train_y, Model_Data.train_x], axis=1)
 apple_stat.to_csv("aaple_stat.csv", index=True)

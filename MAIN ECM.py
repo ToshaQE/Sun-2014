@@ -474,7 +474,7 @@ msft_pmd_df = msft_pmd_df.iloc[:,:-1]
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
 
-Model_Data = algo(df=aapl_long, target="Close", max_lag=20, stationarity_method = 1, test_size=0.05)
+Model_Data = algo(df=aapl_medium, target="Close", max_lag=20, stationarity_method = 1, test_size=0.05)
 
 apple_stat = pd.concat([Model_Data.train_y, Model_Data.train_x], axis=1)
 apple_stat.to_csv("aaple_stat.csv", index=True)

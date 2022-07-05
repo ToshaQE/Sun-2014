@@ -100,11 +100,11 @@ results = nlc.nonlincausalityMLP(
     run=1,
     add_Dropout=True,
     Dropout_rate=0.01,
-    epochs_num=[50, 100],
+    epochs_num=[10, 15],
     learning_rate=[0.001, 0.0001],
     batch_size_num=128,
     verbose=True,
-    plot=True,
+    plot=False,
 )
 
 # results = nlc.nonlincausalityARIMA(x=data_train, maxlag=lags, x_test=data_test)

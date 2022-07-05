@@ -1,5 +1,7 @@
 class Sun_Model:
-    def __init__(self, fin_model, summary, aug_models, MAE, train_y, train_x, test_y, test_x, y_pred):
+    def __init__(self, fin_model, summary, aug_models, MAE,
+                    train_y, train_x, test_y, test_x, y_pred,
+                    destat_data):
         self.fin_model = fin_model
         self.summary = summary
         self.MAE = MAE
@@ -9,3 +11,6 @@ class Sun_Model:
         self.test_y = test_y
         self.test_x = test_x
         self.y_pred = y_pred
+        self.destat_data = destat_data
+
+
