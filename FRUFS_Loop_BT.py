@@ -42,8 +42,8 @@ sun_y_train_destat = Model_Data.destat_data["y_train"]
 sun_y_test_destat = Model_Data.destat_data["y_test"]
 stationarity_method = Model_Data.destat_data["stationarity_method"]
 y_integ_order = Model_Data.destat_data["y_integ_order"]
-sun_MAE_train = Model_Data.MAE["train"]
-sun_MAE_test = Model_Data.MAE["test"]
+sun_MAE_train = Model_Data.MAE["Original"]["train"]
+sun_MAE_test = Model_Data.MAE["Original"]["test"]
 sun_fin_model = Model_Data.fin_model
 
 sun_model_params = list(sun_fin_model.params.index)
@@ -144,19 +144,22 @@ for n in list(range(1, total_n_features+1)):
     FRUFS_Loop["MAE Test"].append(MAE_test)
     FRUFS_Loop["Feature %"].append((n/total_n_features)*100)
 
-FRUFS_Loop["MAE Train % Change"] = ((FRUFS_Loop["MAE Train"]/sun_MAE_train) - 1)*100
-FRUFS_Loop["MAE Test % Change"] = ((FRUFS_Loop["MAE Test"]/sun_MAE_test) - 1)*100
+# FRUFS_Loop["MAE Train % Change"] = ((FRUFS_Loop["MAE Train"]/sun_MAE_train) - 1)*100
+# FRUFS_Loop["MAE Test % Change"] = ((FRUFS_Loop["MAE Test"]/sun_MAE_test) - 1)*100
+
+FRUFS_Loop["MAE Train % Change"] = FRUFS_Loop["MAE Train"]
+FRUFS_Loop["MAE Test % Change"] = FRUFS_Loop["MAE Test"]
 FRUFS_Loop = pd.DataFrame.from_dict(FRUFS_Loop)
 FRUFS_Long = pd.melt(FRUFS_Loop, ['Feature %'])
 
 FRUFS_Vis = FRUFS_Long.loc[FRUFS_Long['variable'].isin(["MAE Train % Change", "MAE Test % Change"])]
 
-ax = sns.lineplot(x='Feature %', y='value', hue='variable', 
+ax2 = sns.lineplot(x='Feature %', y='value', hue='variable', 
              data=FRUFS_Vis)
 
-ax.invert_xaxis()
+ax2.invert_xaxis()
 
-ax.set(xlabel='% of Features returned by FRUFS', ylabel='% Change over the original scores')
+ax2.set(xlabel='% of Features returned by FRUFS', ylabel='% Change over the original scores')
 
 
 plt.show()

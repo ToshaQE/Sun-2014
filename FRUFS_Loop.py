@@ -38,8 +38,8 @@ sun_x_train = Model_Data.train_x
 sun_y_train = Model_Data.train_y
 sun_y_test = Model_Data.test_y
 sun_x_test = Model_Data.test_x
-sun_MAE_train = Model_Data.MAE["train"]
-sun_MAE_test = Model_Data.MAE["test"]
+sun_MAE_train = Model_Data.MAE["Stationary"]["train"]
+sun_MAE_test = Model_Data.MAE["Stationary"]["test"]
 sun_fin_model = Model_Data.fin_model
 
 sun_model_params = list(sun_fin_model.params.index)
@@ -93,8 +93,12 @@ for n in list(range(1, total_n_features+1)):
     FRUFS_Loop["MAE Test"].append(MAE_test)
     FRUFS_Loop["Feature %"].append((n/total_n_features)*100)
 
-FRUFS_Loop["MAE Train % Change"] = ((FRUFS_Loop["MAE Train"]/sun_MAE_train) - 1)*100
-FRUFS_Loop["MAE Test % Change"] = ((FRUFS_Loop["MAE Test"]/sun_MAE_test) - 1)*100
+# FRUFS_Loop["MAE Train % Change"] = ((FRUFS_Loop["MAE Train"]/sun_MAE_train) - 1)*100
+# FRUFS_Loop["MAE Test % Change"] = ((FRUFS_Loop["MAE Test"]/sun_MAE_test) - 1)*100
+
+
+FRUFS_Loop["MAE Train % Change"] = FRUFS_Loop["MAE Train"]
+FRUFS_Loop["MAE Test % Change"] = FRUFS_Loop["MAE Test"]
 FRUFS_Loop = pd.DataFrame.from_dict(FRUFS_Loop)
 FRUFS_Long = pd.melt(FRUFS_Loop, ['Feature %'])
 

@@ -139,6 +139,8 @@ def algo(df, target, max_lag, stationarity_method, test_size):
             orders_of_integ[feature] = counter
             const_counters[feature] = const_counter
 
+    # staionarity_df[target] = y_original
+
     staionarity_df.dropna(inplace=True)
     staionarity_df.reset_index(drop=True, inplace=True)
 
@@ -512,13 +514,14 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 
 
         
-        MAE_nonstat = {"train": MAE_train, "test": MAE_test}
+        MAE_stat = {"train": MAE_train, "test": MAE_test}
+        MAE_ = {"Original": MAE, "Stationary": MAE_stat}
         logging.info("Check")
         destat_data = {"y_train": y_train_m_destat, "y_test": y_test_non_stat_destat,
                         "stationarity_method": stationarity_method,
                         "y_integ_order": orders_of_integ[target]}
 
-        Model_Data = Sun_Model(fin_model, fin_model.summary(), aug_models, MAE,
+        Model_Data = Sun_Model(fin_model, fin_model.summary(), aug_models, MAE_,
                                 y_train_m, feature_n_dfs_merge,
                                 y_test, test_data,
                                 y_pred_out, destat_data)
@@ -531,8 +534,8 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 #Reading in the data
 df_aapl = pd.read_csv("df_aaple.csv")
 # Truncating the dataw
-aapl_medium = df_aapl.iloc[:2000,:16]
-aapl_long = df_aapl.iloc[:,:16]
+aapl_medium = df_aapl.iloc[:2000,:23]
+aapl_long = df_aapl.iloc[:,:23]
 
 df_jpm = pd.read_csv("jpm.csv")
 jpm_medium = df_jpm.iloc[:2000,:16]
@@ -559,18 +562,32 @@ msft_pmd_df = pmd.datasets.load_msft()
 msft_pmd_df = msft_pmd_df.iloc[:,:-1]
 
 
+crypto_data = pd.read_pickle("btc_1d-1.pkl")
+crypto_data["f-34"] = pd.to_numeric(crypto_data["f-34"], errors="coerce")
+crypto_data["f-35"] = pd.to_numeric(crypto_data["f-35"], errors="coerce")
+crypto_data["f-41"] = pd.to_numeric(crypto_data["f-41"], errors="coerce")
+crypto_data.pop("open")
+
+
+
+
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
 
-Model_Data = algo(df=fb_medium, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
+Model_Data = algo(df=aapl_long, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
 
 apple_stat = pd.concat([Model_Data.train_y, Model_Data.train_x], axis=1)
 apple_stat.to_csv("aaple_stat.csv", index=True)
 
 
+
+
 print(Model_Data.summary)
 
 
-print(Model_Data.MAE)
+print(f'MAE on the original scale is: \n{Model_Data.MAE["Original"]}\n\n')
+print(f'MAE on the stationaries scale is: \n{Model_Data.MAE["Stationary"]}')
+
+
 # print(Model_Data.train_y)
 
 
