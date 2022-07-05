@@ -403,6 +403,12 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         stationarity_df_test.dropna(inplace=True)
         stationarity_df_test.reset_index(drop=True, inplace=True)
 
+        y_test = stationarity_df_test[target]
+        X_test = stationarity_df_test[[n for n in list(stationarity_df_test.columns) if n != target]]
+
+        # Formatting the test dataframes to suit the model's exog format
+        test_data = []
+
 
         #Finding the maximum seleceted lag length to truncate the test data appropriately
         selected_lag_lens = []
@@ -555,7 +561,7 @@ msft_pmd_df = msft_pmd_df.iloc[:,:-1]
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
 
-Model_Data = algo(df=aapl_long, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
+Model_Data = algo(df=fb_medium, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
 
 apple_stat = pd.concat([Model_Data.train_y, Model_Data.train_x], axis=1)
 apple_stat.to_csv("aaple_stat.csv", index=True)

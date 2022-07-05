@@ -106,6 +106,7 @@ for n in list(range(1, total_n_features+1)):
             y_pred_in_destat = y_pred_in_destat.cumsum()
 
             MAE_train_destat = np.nanmean(abs(y_pred_in_destat - sun_y_train_destat))
+            MAE_train = MAE_train_destat
 
             y_pred_out_destat = y_pred_out_frufs.copy()
             y_pred_out_destat.loc[-1] = sun_y_test_destat.iloc[0]
@@ -114,6 +115,7 @@ for n in list(range(1, total_n_features+1)):
             y_pred_out_destat = y_pred_out_destat.cumsum()
 
             MAE_test_destat = np.nanmean(abs(y_pred_out_destat - sun_y_test_destat))
+            MAE_test = MAE_test_destat
 
         
         elif stationarity_method == 1:
@@ -124,13 +126,18 @@ for n in list(range(1, total_n_features+1)):
             y_pred_in_destat = np.exp(y_pred_in_destat.cumsum())
 
             MAE_train_destat = np.nanmean(abs(y_pred_in_destat - sun_y_train_destat))
+            MAE_train = MAE_train_destat
 
-            y_test_logged = np.log(y_test_non_stat)
+            y_test_logged = np.log(sun_y_test_destat)
             y_pred_out_destat = y_pred_out_frufs.copy()
-            y_pred_out_destat.loc[-1] = y_test_logged.iloc[max_sel_lag]
+            y_pred_out_destat.loc[-1] = y_test_logged.iloc[0]
             y_pred_out_destat.index = y_pred_out_destat.index + 1
             y_pred_out_destat = y_pred_out_destat.sort_index()
             y_pred_out_destat = np.exp(y_pred_out_destat.cumsum())
+
+            MAE_test_destat = np.nanmean(abs(y_pred_out_destat - sun_y_test_destat))
+            MAE_test = MAE_test_destat
+
 
 
     FRUFS_Loop["MAE Train"].append(MAE_train)
