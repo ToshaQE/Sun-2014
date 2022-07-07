@@ -80,5 +80,10 @@ df_air_q = pd.read_csv("AirQualityUCI.csv")
 
 arima_fit = auto_arima(y=aapl_long.iloc[:,1], information_criterion="bic", random_state=42)
 
-y_pred = arima_fit.predict()
-arima_fit.summary()
+y_pred = arima_fit.predict_in_sample()
+
+print(arima_fit.summary())
+
+
+
+print("Stop")

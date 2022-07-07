@@ -99,15 +99,15 @@ def algo(df, target, max_lag, stationarity_method, test_size):
     const_counters = {}
 
     for feature in features:
-        result = adfuller(staionarity_df[feature], autolag="t-stat")
+        result = adfuller(staionarity_df[feature], autolag="t-stat", regression="c")
         counter = 0
         if stationarity_method == 0:
-            while result[1] >= 0.01:
+            while result[1] >= 0.05:
                 staionarity_df[feature] = staionarity_df[feature] - staionarity_df[feature].shift(1)
                 #df_small.dropna()
                 counter += 1
                 #dropna(inplace=False) because it drops one observation for each feature
-                result = adfuller(staionarity_df.dropna()[feature], autolag="t-stat")
+                result = adfuller(staionarity_df.dropna()[feature], autolag="t-stat", regression="c")
             print(f'Order of integration for feature "{feature}" is {counter}')
             orders_of_integ[feature] = counter
         elif stationarity_method == 1:
@@ -534,8 +534,8 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 #Reading in the data
 df_aapl = pd.read_csv("df_aaple.csv")
 # Truncating the dataw
-aapl_medium = df_aapl.iloc[:2000,:23]
-aapl_long = df_aapl.iloc[:,:23]
+aapl_medium = df_aapl.iloc[:2000,:16]
+aapl_long = df_aapl.iloc[:,:16]
 
 df_jpm = pd.read_csv("jpm.csv")
 jpm_medium = df_jpm.iloc[:2000,:16]
@@ -573,7 +573,7 @@ crypto_data.pop("open")
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
 
-Model_Data = algo(df=aapl_long, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
+Model_Data = algo(df=df_air_q, target="CO(GT)", max_lag=20, stationarity_method = 0, test_size=0.05)
 
 apple_stat = pd.concat([Model_Data.train_y, Model_Data.train_x], axis=1)
 apple_stat.to_csv("aaple_stat.csv", index=True)

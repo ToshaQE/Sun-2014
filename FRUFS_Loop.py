@@ -93,12 +93,12 @@ for n in list(range(1, total_n_features+1)):
     FRUFS_Loop["MAE Test"].append(MAE_test)
     FRUFS_Loop["Feature %"].append((n/total_n_features)*100)
 
-# FRUFS_Loop["MAE Train % Change"] = ((FRUFS_Loop["MAE Train"]/sun_MAE_train) - 1)*100
-# FRUFS_Loop["MAE Test % Change"] = ((FRUFS_Loop["MAE Test"]/sun_MAE_test) - 1)*100
+FRUFS_Loop["MAE Train % Change"] = ((FRUFS_Loop["MAE Train"]/sun_MAE_train) - 1)*100
+FRUFS_Loop["MAE Test % Change"] = ((FRUFS_Loop["MAE Test"]/sun_MAE_test) - 1)*100
 
 
-FRUFS_Loop["MAE Train % Change"] = FRUFS_Loop["MAE Train"]
-FRUFS_Loop["MAE Test % Change"] = FRUFS_Loop["MAE Test"]
+# FRUFS_Loop["MAE Train % Change"] = FRUFS_Loop["MAE Train"]
+# FRUFS_Loop["MAE Test % Change"] = FRUFS_Loop["MAE Test"]
 FRUFS_Loop = pd.DataFrame.from_dict(FRUFS_Loop)
 FRUFS_Long = pd.melt(FRUFS_Loop, ['Feature %'])
 
