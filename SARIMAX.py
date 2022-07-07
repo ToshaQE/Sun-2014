@@ -67,25 +67,30 @@ from pmdarima.arima import auto_arima
 
 df_aapl = pd.read_csv("df_aaple.csv")
 # Truncating the dataw
-aapl_medium = df_aapl.iloc[:2000,:16]
-aapl_long = df_aapl.iloc[:,:16]
+aapl_medium = df_aapl.iloc[:2500,:16]
+endogs = aapl_medium["Close"].iloc[1:2000]
+endogs.reset_index(drop=True, inplace=True)
 
+exogs = aapl_medium.iloc[:2000,2:].shift(1).dropna()
+exogs.reset_index(drop=True, inplace=True)
 
-# exogs = aapl_medium.iloc[:,2:].shift(1).dropna()
+exogs_test = aapl_medium.iloc[2000:,2:].shift(1).dropna()
+exogs_test.reset_index(drop=True, inplace=True)
+endogs_test = aapl_medium["Close"].iloc[2001:]
+endogs_test.reset_index(drop=True, inplace=True)
+
+# aapl_long = df_aapl.iloc[:,:16]
+# exogs = aapl_long.iloc[:,2:].shift(1).dropna()
 # exogs.reset_index(drop=True, inplace=True)
 
-# exogs = aapl_long.iloc[:,2:16].shift(1).dropna()
-# exogs.reset_index(drop=True, inplace=True)
-
-# endogs = aapl_medium["Close"].iloc[1:]
 # endogs = aapl_long["Close"].iloc[1:]
 # endogs.reset_index(drop=True, inplace=True)
 
 
 
-df_air_q = pd.read_csv("AirQualityUCI.csv")
-endogs = df_air_q.iloc[:,1]
-exogs = df_air_q.iloc[:,2:]
+# df_air_q = pd.read_csv("AirQualityUCI.csv")
+# endogs = df_air_q.iloc[:,1]
+# exogs = df_air_q.iloc[:,2:]
 
 
 # sarimax = SARIMAX(endog = endogs, exog=exogs).fit()
@@ -106,6 +111,10 @@ arima_pred = arima_fit.predict_in_sample(X=exogs, n_periods=exogs.shape[0])
 # arima_pred = arima_fit.predict_in_sample()
 
 MAE_arima = meanabs(endogs, arima_pred)
+
+
+arima_pred_out = arima_fit.predict(X=exogs_test, n_periods=exogs_test.shape[0])
+MAE_arima_test = meanabs(endogs_test, arima_pred_out)
 
 print(arima_fit.summary(), MAE_arima)
 

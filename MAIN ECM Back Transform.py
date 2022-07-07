@@ -573,7 +573,7 @@ crypto_data.pop("open")
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
 
-Model_Data = algo(df=df_air_q, target="CO(GT)", max_lag=20, stationarity_method = 0, test_size=0.05)
+Model_Data = algo(df=aapl_long, target="Close", max_lag=20, stationarity_method = 0, test_size=0.05)
 
 apple_stat = pd.concat([Model_Data.train_y, Model_Data.train_x], axis=1)
 apple_stat.to_csv("aaple_stat.csv", index=True)
