@@ -373,7 +373,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         if stationarity_method == 0:
         # if transformation is simple differencing
             for feature in features:
-                # Continue if the feature was found to be stationary withoud tranformation
+                # Continue if the feature was found to be stationary without tranformation
                 if orders_of_integ[feature] == 0:
                     continue
                 else:
@@ -401,6 +401,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
                     for o in integr_list:
                         stationarity_df_test[feature] = stationarity_df_test[feature].diff()
 
+        # stationarity_df_test[target] = y_test_non_stat
 
         stationarity_df_test.dropna(inplace=True)
         stationarity_df_test.reset_index(drop=True, inplace=True)
@@ -534,6 +535,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 #Reading in the data
 df_aapl = pd.read_csv("df_aaple.csv")
 # Truncating the dataw
+aapl_short = df_aapl.iloc[:1600,:16]
 aapl_medium = df_aapl.iloc[:2000,:16]
 aapl_long = df_aapl.iloc[:,:16]
 
@@ -573,7 +575,7 @@ crypto_data.pop("open")
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
 
-Model_Data = algo(df=aapl_long, target="Close", max_lag=20, stationarity_method = 0, test_size=0.05)
+Model_Data = algo(df=aapl_short, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
 
 apple_stat = pd.concat([Model_Data.train_y, Model_Data.train_x], axis=1)
 apple_stat.to_csv("aaple_stat.csv", index=True)
