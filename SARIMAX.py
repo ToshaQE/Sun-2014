@@ -67,16 +67,16 @@ from pmdarima.arima import auto_arima
 
 df_aapl = pd.read_csv("df_aaple.csv")
 # Truncating the dataw
-aapl_medium = df_aapl.iloc[:2500,:16]
-endogs = aapl_medium["Close"].iloc[1:2000]
+aapl_medium = df_aapl.iloc[:1600,:16]
+endogs = aapl_medium["Close"].iloc[1:1280]
 endogs.reset_index(drop=True, inplace=True)
 
-exogs = aapl_medium.iloc[:2000,2:].shift(1).dropna()
+exogs = aapl_medium.iloc[:1280,2:].shift(1).dropna()
 exogs.reset_index(drop=True, inplace=True)
 
-exogs_test = aapl_medium.iloc[2000:,2:].shift(1).dropna()
+exogs_test = aapl_medium.iloc[1280:,2:].shift(1).dropna()
 exogs_test.reset_index(drop=True, inplace=True)
-endogs_test = aapl_medium["Close"].iloc[2001:]
+endogs_test = aapl_medium["Close"].iloc[1281:]
 endogs_test.reset_index(drop=True, inplace=True)
 
 # aapl_long = df_aapl.iloc[:,:16]

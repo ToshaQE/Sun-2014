@@ -29,6 +29,8 @@ from tqdm.notebook import trange, tqdm
 from FRUFS import FRUFS
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+from statsmodels.tools.eval_measures import meanabs
+
 
 
 
@@ -47,12 +49,15 @@ from sklearn.model_selection import train_test_split
 import re
 import logging
 import plotly.express as px
+import math
 
 
 from Sun_Model_Class import Sun_Model
 # logging.INFO
 
 import pmdarima as pmd
+
+from my_metrics import rae, rrse
 
 
 
@@ -325,6 +330,10 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 
         y_pred_in = fin_model.predict()
         MAE_train = np.nanmean(abs(y_pred_in - y_train_m))
+        MSE_train = mean_squared_error(y_pred_in, y_train_m)
+        RMSE_train = math.sqrt(MSE_train)
+        RAE_train = rae(actual=y_train_m, predicted = y_pred_in)
+        RRSE_train = rrse(actual=y_train_m, predicted = y_pred_in)
 
         if orders_of_integ[target] > 0:
 
@@ -473,7 +482,14 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         last_oos_ind = first_oos_ind + len(y_test) - 1
         y_pred_out = fin_model.predict(start=first_oos_ind, end=last_oos_ind, exog_oos=test_data)
         y_pred_out.reset_index(drop=True, inplace=True)
+
         MAE_test = np.nanmean(abs(y_pred_out - y_test))
+        MSE_test = mean_squared_error(y_pred_out, y_test)
+        RMSE_test = math.sqrt(MSE_test)
+        RAE_test = rae(actual=y_test, predicted = y_pred_out)
+        RRSE_test = rrse(actual=y_test, predicted = y_pred_out)
+
+
 
         if orders_of_integ[target] > 0:
 
@@ -521,11 +537,15 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         destat_data = {"y_train": y_train_m_destat, "y_test": y_test_non_stat_destat,
                         "stationarity_method": stationarity_method,
                         "y_integ_order": orders_of_integ[target]}
+        my_metrics_test = {"MAE":[MAE_test], "RMSE":[RMSE_test], "RAE":[RAE_test], "RRSE":[RRSE_test]}
+        my_metrics_train = {"MAE":[MAE_train], "RMSE":[RMSE_train], "RAE":[RAE_train], "RRSE":[RRSE_train]}
+        my_metrics = {"train":my_metrics_train, "test":my_metrics_test}
 
         Model_Data = Sun_Model(fin_model, fin_model.summary(), aug_models, MAE_,
                                 y_train_m, feature_n_dfs_merge,
                                 y_test, test_data,
-                                y_pred_out, destat_data)
+                                y_pred_out, destat_data,
+                                my_metrics)
         #return fin_model, aug_models, feature_n_dfs, feature_n_dfs_merge, MAE, Sun_Model1
         return Model_Data
     except ValueError:
@@ -577,6 +597,8 @@ crypto_data.pop("open")
 
 Model_Data = algo(df=aapl_short, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
 
+
+
 apple_stat = pd.concat([Model_Data.train_y, Model_Data.train_x], axis=1)
 apple_stat.to_csv("aaple_stat.csv", index=True)
 
@@ -588,6 +610,7 @@ print(Model_Data.summary)
 
 print(f'MAE on the original scale is: \n{Model_Data.MAE["Original"]}\n\n')
 print(f'MAE on the stationaries scale is: \n{Model_Data.MAE["Stationary"]}')
+print(Model_Data.my_metrics["test"])
 
 
 # print(Model_Data.train_y)
