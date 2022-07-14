@@ -55,12 +55,17 @@ model_frufs_generated = FRUFS(
 pruned_df = model_frufs_generated.fit_transform(sun_x_train)
 
 FRUFS_Loop = {"MAE Train":[], "MAE Test":[], "Feature %":[]}
-
 # pruned_df = pruned_df[pruned_df.columns[::-1]]
 
-# print("He")
-for n in list(range(1, total_n_features+1)):
-    pruned_df_cut =  pruned_df.iloc[:,:n]
+for n in list(range(total_n_features, 0, -1)):
+
+    if n != total_n_features and n != 1:
+        pruned_df_cut = model_frufs_generated.fit_transform(pruned_df_cut.iloc[:,:n])
+    elif n == 1:
+        pruned_df_cut = pruned_df_cut.iloc[:,:n]
+    else:
+        pruned_df_cut =  pruned_df
+
     # Training the model on the features selected by FRUFS
     # Check whether the Sun Model has a constant or not
     if "const" in sun_model_params:

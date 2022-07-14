@@ -141,9 +141,9 @@ def SARIMAX(df, target, test_size):
 
     return arima_fit, arima_pred_in, arima_pred_out, MAE_train, MAE_test, my_metrics
 
-# Auto_SARIMA, pred_in, pred_out, MAE_train, MAE_test, sarima_metrics = SARIMA(df=aapl_long, target="Close", test_size=0.2) 
+Auto_SARIMA, pred_in, pred_out, MAE_train, MAE_test, sarima_metrics = SARIMA(df=aapl_medium, target="Close", test_size=0.2) 
 
-Auto_SARIMAX, pred_in, pred_out, MAE_train, MAE_test, sarimax_metrics = SARIMAX(df=aapl_medium, target="Close", test_size=0.2)
+# Auto_SARIMAX, pred_in, pred_out, MAE_train, MAE_test, sarimax_metrics = SARIMAX(df=aapl_medium, target="Close", test_size=0.2)
 
 
 # sun_metrics = Model_Data.my_metrics
@@ -159,7 +159,7 @@ Auto_SARIMAX, pred_in, pred_out, MAE_train, MAE_test, sarimax_metrics = SARIMAX(
 #         all_metrics[split][metric].append(sarimax_metrics[split][metric][0])
 
 
-print(Auto_SARIMAX.summary(), "\n\n", MAE_train,"\n", MAE_test)
+print(Auto_SARIMA.summary(), "\n\n", MAE_train,"\n", MAE_test)
 
 # all_metrics_df = pd.DataFrame.from_dict(all_metrics["test"])
 # all_metrics_df.to_csv("all_metrics.csv", index=False)

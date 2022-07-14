@@ -159,7 +159,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
     x_features = list(X_train.columns)
 
     for x_feature in x_features:
-        if orders_of_integ[target] == orders_of_integ[x_feature] & orders_of_integ[target] != 0:
+        if orders_of_integ[target] == orders_of_integ[x_feature] and orders_of_integ[target] != 0:
             E_G = engle_granger(yx_train_original[target], yx_train_original[x_feature], trend = "n", method = "t-stat")
             if E_G.pvalue < 0.05:
                 cointegr_dict[x_feature] = 1
@@ -595,7 +595,7 @@ crypto_data.pop("open")
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
 
-Model_Data = algo(df=aapl_medium, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
+Model_Data = algo(df=df_air_q, target="CO(GT)", max_lag=20, stationarity_method = 0, test_size=0.2)
 
 
 
