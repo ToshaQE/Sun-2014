@@ -57,6 +57,7 @@ from Sun_Model_Class import Sun_Model
 
 import pmdarima as pmd
 from pmdarima.arima import auto_arima
+from pmdarima.arima import ndiffs
 import math
 from my_metrics import rae, rrse
 
@@ -68,11 +69,13 @@ infile.close()
 #Reading in the data
 df_aapl = pd.read_csv("df_aaple.csv")
 # Truncating the dataw
-aapl_medium = df_aapl.iloc[:2000,:16]
-aapl_short = df_aapl.iloc[:2000,:16]
+aapl_long = df_aapl.iloc[:,:16]
+aapl_medium = df_aapl.iloc[:2500,:16]
+aapl_short = df_aapl.iloc[:1600,:16]
 
 
-df_air_q = pd.read_csv("AirQualityUCI.csv")
+
+# df_air_q = pd.read_csv("AirQualityUCI.csv")
 # # endogs = df_air_q.iloc[:,1]
 # # exogs = df_air_q.iloc[:,2:]
 def SARIMA(df, target, test_size):
@@ -138,28 +141,28 @@ def SARIMAX(df, target, test_size):
 
     return arima_fit, arima_pred_in, arima_pred_out, MAE_train, MAE_test, my_metrics
 
-Auto_SARIMA, pred_in, pred_out, MAE_train, MAE_test, sarima_metrics = SARIMA(df=df_air_q, target="CO(GT)", test_size=0.2) 
+# Auto_SARIMA, pred_in, pred_out, MAE_train, MAE_test, sarima_metrics = SARIMA(df=aapl_long, target="Close", test_size=0.2) 
 
-Auto_SARIMAX, pred_in, pred_out, MAE_train, MAE_test, sarimax_metrics = SARIMAX(df=df_air_q, target="CO(GT)", test_size=0.2)
+Auto_SARIMAX, pred_in, pred_out, MAE_train, MAE_test, sarimax_metrics = SARIMAX(df=aapl_medium, target="Close", test_size=0.2)
 
 
-sun_metrics = Model_Data.my_metrics
+# sun_metrics = Model_Data.my_metrics
 
-all_metrics = dict(sun_metrics)
+# all_metrics = dict(sun_metrics)
 
-train_test = all_metrics.keys()
+# train_test = all_metrics.keys()
 
-for split in train_test:
-    metrics = all_metrics[split].keys()
-    for metric in metrics:
-        all_metrics[split][metric].append(sarima_metrics[split][metric][0])
-        all_metrics[split][metric].append(sarimax_metrics[split][metric][0])
+# for split in train_test:
+#     metrics = all_metrics[split].keys()
+#     for metric in metrics:
+#         all_metrics[split][metric].append(sarima_metrics[split][metric][0])
+#         all_metrics[split][metric].append(sarimax_metrics[split][metric][0])
 
 
 print(Auto_SARIMAX.summary(), "\n\n", MAE_train,"\n", MAE_test)
 
-all_metrics_df = pd.DataFrame.from_dict(all_metrics["test"])
-all_metrics_df.to_csv("all_metrics.csv", index=False)
+# all_metrics_df = pd.DataFrame.from_dict(all_metrics["test"])
+# all_metrics_df.to_csv("all_metrics.csv", index=False)
 
 
 print("Stop")

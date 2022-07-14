@@ -107,7 +107,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         result = adfuller(staionarity_df[feature], autolag="t-stat", regression="c")
         counter = 0
         if stationarity_method == 0:
-            while result[1] >= 0.05:
+            while result[1] >= 0.01:
                 staionarity_df[feature] = staionarity_df[feature] - staionarity_df[feature].shift(1)
                 #df_small.dropna()
                 counter += 1
@@ -556,7 +556,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 df_aapl = pd.read_csv("df_aaple.csv")
 # Truncating the dataw
 aapl_short = df_aapl.iloc[:1600,:16]
-aapl_medium = df_aapl.iloc[:2000,:16]
+aapl_medium = df_aapl.iloc[:2500,:16]
 aapl_long = df_aapl.iloc[:,:16]
 
 df_jpm = pd.read_csv("jpm.csv")
@@ -595,7 +595,7 @@ crypto_data.pop("open")
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
 
-Model_Data = algo(df=aapl_short, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
+Model_Data = algo(df=aapl_medium, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
 
 
 
