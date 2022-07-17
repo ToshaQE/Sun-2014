@@ -595,7 +595,7 @@ crypto_data.pop("open")
 
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
 
-Model_Data = algo(df=aapl_short, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
+Model_Data = algo(df=aapl_medium, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
 
 
 

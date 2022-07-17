@@ -54,16 +54,28 @@ model_frufs_generated = FRUFS(
 # fit_transform returns data ranked in the order of importance
 pruned_df = model_frufs_generated.fit_transform(sun_x_train)
 
-FRUFS_Loop = {"MAE Train":[], "MAE Test":[], "Feature %":[]}
+FRUFS_Loop = {"MAE Train":[], "MAE Test":[], "Feature %":[], "Feature Dropped":[]}
 # pruned_df = pruned_df[pruned_df.columns[::-1]]
 
+# column_names = list(pruned_df.columns)
 for n in list(range(total_n_features, 0, -1)):
 
     if n != total_n_features and n != 1:
+        column_names = list(pruned_df_cut.columns)
+        column_dropped = column_names[n]
+        print(n)
         pruned_df_cut = model_frufs_generated.fit_transform(pruned_df_cut.iloc[:,:n])
     elif n == 1:
+        # column_names = list(pruned_df_cut.columns)
+        # column_dropped = column_names[n]
+        # pruned_df_cut = pruned_df_cut.iloc[:,:n]
+        pruned_df_cut = model_frufs_generated.fit_transform(pruned_df_cut)
+        column_names = list(pruned_df_cut.columns)
+        column_dropped = column_names[n]
         pruned_df_cut = pruned_df_cut.iloc[:,:n]
+
     else:
+        column_dropped = "None"
         pruned_df_cut =  pruned_df
 
     # Training the model on the features selected by FRUFS
@@ -99,6 +111,8 @@ for n in list(range(total_n_features, 0, -1)):
     FRUFS_Loop["MAE Train"].append(MAE_train)
     FRUFS_Loop["MAE Test"].append(MAE_test)
     FRUFS_Loop["Feature %"].append((n/total_n_features)*100)
+    FRUFS_Loop["Feature Dropped"].append(column_dropped)
+
 
 FRUFS_Loop["MAE Train % Change"] = ((FRUFS_Loop["MAE Train"]/sun_MAE_train) - 1)*100
 FRUFS_Loop["MAE Test % Change"] = ((FRUFS_Loop["MAE Test"]/sun_MAE_test) - 1)*100
@@ -107,12 +121,21 @@ FRUFS_Loop["MAE Test % Change"] = ((FRUFS_Loop["MAE Test"]/sun_MAE_test) - 1)*10
 # FRUFS_Loop["MAE Train % Change"] = FRUFS_Loop["MAE Train"]
 # FRUFS_Loop["MAE Test % Change"] = FRUFS_Loop["MAE Test"]
 FRUFS_Loop = pd.DataFrame.from_dict(FRUFS_Loop)
+
+features_dropped = FRUFS_Loop["Feature Dropped"]
+test_changes = FRUFS_Loop["MAE Test % Change"]
+feature_pcs = FRUFS_Loop["Feature %"]
+
 FRUFS_Long = pd.melt(FRUFS_Loop, ['Feature %'])
 
 FRUFS_Vis = FRUFS_Long.loc[FRUFS_Long['variable'].isin(["MAE Train % Change", "MAE Test % Change"])]
 
 ax = sns.lineplot(x='Feature %', y='value', hue='variable', 
-             data=FRUFS_Vis)
+             data=FRUFS_Vis, marker="o")
+
+for i, feature in enumerate(features_dropped):
+    plt.annotate(feature, (feature_pcs[i],
+    test_changes[i]+0.1))
 
 ax.invert_xaxis()
 

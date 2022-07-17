@@ -1,4 +1,5 @@
 from cgi import test
+from colorsys import yiq_to_rgb
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,6 +17,7 @@ import re
 from arch.unitroot.cointegration import engle_granger
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tools.eval_measures import meanabs
+from pmdarima.arima.utils import ndiffs
 
 
 
@@ -75,6 +77,14 @@ aapl_short = df_aapl.iloc[:1600,:16]
 
 
 
+
+crypto_data = pd.read_pickle("btc_1d-1.pkl")
+crypto_data["f-34"] = pd.to_numeric(crypto_data["f-34"], errors="coerce")
+crypto_data["f-35"] = pd.to_numeric(crypto_data["f-35"], errors="coerce")
+crypto_data["f-41"] = pd.to_numeric(crypto_data["f-41"], errors="coerce")
+crypto_data.pop("open")
+
+
 # df_air_q = pd.read_csv("AirQualityUCI.csv")
 # # endogs = df_air_q.iloc[:,1]
 # # exogs = df_air_q.iloc[:,2:]
@@ -84,7 +94,7 @@ def SARIMA(df, target, test_size):
 
     y_train, y_test = train_test_split(target_df, test_size=test_size, shuffle=False)
 
-    arima_fit = auto_arima(y=y_train, information_criterion="bic", random_state=42)
+    arima_fit = auto_arima(y=y_train, information_criterion="bic", random_state=42, d=1)
     arima_pred_in = arima_fit.predict_in_sample(n_periods=y_train.shape[0])
     arima_pred_out = arima_fit.predict(n_periods=y_test.shape[0])
 
@@ -119,7 +129,7 @@ def SARIMAX(df, target, test_size):
 
     X_train, X_test, y_train, y_test = train_test_split(feature_df, target_df, test_size=test_size, shuffle=False)
 
-    arima_fit = auto_arima(y=y_train, X = X_train, information_criterion="bic", random_state=42)
+    arima_fit = auto_arima(y=y_train, X = X_train, information_criterion="bic", random_state=42, test="adf")
     arima_pred_in = arima_fit.predict_in_sample(X=X_train, n_periods=X_train.shape[0])
     arima_pred_out = arima_fit.predict(X=X_test, n_periods=X_test.shape[0])
 
@@ -164,6 +174,32 @@ print(Auto_SARIMA.summary(), "\n\n", MAE_train,"\n", MAE_test)
 # all_metrics_df = pd.DataFrame.from_dict(all_metrics["test"])
 # all_metrics_df.to_csv("all_metrics.csv", index=False)
 
+# def split(df, target, test_size):
+#     feature_df = df.loc[:, ~df.columns.isin([target, "Date"])]
+#     target_df = df.loc[:, target]
+
+#     feature_df = feature_df.shift(1).dropna()
+#     feature_df.reset_index(drop=True, inplace=True)
+
+#     target_df = target_df.iloc[1:]
+#     target_df.reset_index(drop=True, inplace=True)
+
+#     X_train, X_test, y_train, y_test = train_test_split(feature_df, target_df, test_size=test_size, shuffle=False)
+
+#     return y_train
+
+# y = split(df=aapl_medium, target="Close", test_size=0.2)
+
+
+# # Estimate the number of differences using an ADF test:
+# n_adf = ndiffs(y, test='adf')  # -> 0
+
+# # Or a KPSS test (auto_arima default):
+# n_kpss = ndiffs(y, test='kpss')  # -> 0
+
+# # Or a PP test:
+# n_pp = ndiffs(y, test='pp')  # -> 0
+# assert n_adf == n_kpss == n_pp == 1
 
 print("Stop")
 

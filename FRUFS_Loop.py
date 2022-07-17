@@ -56,10 +56,17 @@ pruned_df = model_frufs_generated.fit_transform(sun_x_train)
 
 FRUFS_Loop = {"MAE Train":[], "MAE Test":[], "Feature %":[]}
 
+# pruned_df = sun_x_train
 # pruned_df = pruned_df[pruned_df.columns[::-1]]
 
-# print("He")
+column_names = list(pruned_df.columns)
 for n in list(range(1, total_n_features+1)):
+
+    if n == total_n_features:
+        column_dropped = "None"
+    else:
+        column_dropped = column_names[n]
+    
     pruned_df_cut =  pruned_df.iloc[:,:n]
     # Training the model on the features selected by FRUFS
     # Check whether the Sun Model has a constant or not
@@ -107,7 +114,7 @@ FRUFS_Long = pd.melt(FRUFS_Loop, ['Feature %'])
 FRUFS_Vis = FRUFS_Long.loc[FRUFS_Long['variable'].isin(["MAE Train % Change", "MAE Test % Change"])]
 
 ax = sns.lineplot(x='Feature %', y='value', hue='variable', 
-             data=FRUFS_Vis)
+             data=FRUFS_Vis, marker="o")
 
 ax.invert_xaxis()
 
