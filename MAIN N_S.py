@@ -14,7 +14,6 @@ import pickle
 from sklearn.model_selection import train_test_split
 import re
 from arch.unitroot.cointegration import engle_granger
-from statsmodels.tsa.stattools import kpss
 
 
 from FRUFS import FRUFS
@@ -30,6 +29,8 @@ from tqdm.notebook import trange, tqdm
 from FRUFS import FRUFS
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+from statsmodels.tools.eval_measures import meanabs
+
 
 
 
@@ -48,12 +49,15 @@ from sklearn.model_selection import train_test_split
 import re
 import logging
 import plotly.express as px
+import math
 
 
 from Sun_Model_Class import Sun_Model
 # logging.INFO
 
 import pmdarima as pmd
+
+from my_metrics import rae, rrse
 
 
 
@@ -100,15 +104,15 @@ def algo(df, target, max_lag, stationarity_method, test_size):
     const_counters = {}
 
     for feature in features:
-        result = kpss(staionarity_df[feature])
+        result = adfuller(staionarity_df[feature], autolag="t-stat", regression="c")
         counter = 0
         if stationarity_method == 0:
-            while result[1] >= 0.1:
+            while result[1] >= 0.01:
                 staionarity_df[feature] = staionarity_df[feature] - staionarity_df[feature].shift(1)
                 #df_small.dropna()
                 counter += 1
                 #dropna(inplace=False) because it drops one observation for each feature
-                result = kpss(staionarity_df.dropna()[feature])
+                result = adfuller(staionarity_df.dropna()[feature], autolag="t-stat", regression="c")
             print(f'Order of integration for feature "{feature}" is {counter}')
             orders_of_integ[feature] = counter
         elif stationarity_method == 1:
@@ -140,6 +144,8 @@ def algo(df, target, max_lag, stationarity_method, test_size):
             orders_of_integ[feature] = counter
             const_counters[feature] = const_counter
 
+    staionarity_df[target] = y_original
+
     staionarity_df.dropna(inplace=True)
     staionarity_df.reset_index(drop=True, inplace=True)
 
@@ -153,7 +159,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
     x_features = list(X_train.columns)
 
     for x_feature in x_features:
-        if orders_of_integ[target] == orders_of_integ[x_feature] & orders_of_integ[target] != 0:
+        if orders_of_integ[target] == orders_of_integ[x_feature] and orders_of_integ[target] != 0:
             E_G = engle_granger(yx_train_original[target], yx_train_original[x_feature], trend = "n", method = "t-stat")
             if E_G.pvalue < 0.05:
                 cointegr_dict[x_feature] = 1
@@ -324,42 +330,46 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 
         y_pred_in = fin_model.predict()
         MAE_train = np.nanmean(abs(y_pred_in - y_train_m))
+        MSE_train = mean_squared_error(y_pred_in, y_train_m)
+        RMSE_train = math.sqrt(MSE_train)
+        RAE_train = rae(actual=y_train_m, predicted = y_pred_in)
+        RRSE_train = rrse(actual=y_train_m, predicted = y_pred_in)
 
         if orders_of_integ[target] > 0:
 
             # Calculating train scores in the original scale
 
             if stationarity_method == 0:
-                y_train_m_delog = y_train_m.copy()
-                y_train_m_delog.loc[-1] = y_original.iloc[max_lag]
-                y_train_m_delog.index = y_train_m_delog.index + 1
-                y_train_m_delog = y_train_m_delog.sort_index()
-                y_train_m_delog = y_train_m_delog.cumsum()
+                y_train_m_destat = y_train_m.copy()
+                y_train_m_destat.loc[-1] = y_original.iloc[max_lag]
+                y_train_m_destat.index = y_train_m_destat.index + 1
+                y_train_m_destat = y_train_m_destat.sort_index()
+                y_train_m_destat = y_train_m_destat.cumsum()
 
 
-                y_pred_in_delog = y_pred_in.copy()
-                y_pred_in_delog.loc[-1] = y_original.iloc[max_lag]
-                y_pred_in_delog.index = y_pred_in_delog.index + 1
-                y_pred_in_delog = y_pred_in_delog.sort_index()
-                y_pred_in_delog = y_pred_in_delog.cumsum()
+                y_pred_in_destat = y_pred_in.copy()
+                y_pred_in_destat.loc[-1] = y_original.iloc[max_lag]
+                y_pred_in_destat.index = y_pred_in_destat.index + 1
+                y_pred_in_destat = y_pred_in_destat.sort_index()
+                y_pred_in_destat = y_pred_in_destat.cumsum()
 
-                MAE_train_delog = np.nanmean(abs(y_pred_in_delog - y_train_m_delog))
+                MAE_train_destat = np.nanmean(abs(y_pred_in_destat - y_train_m_destat))
 
             elif stationarity_method == 1:
-                y_train_m_delog = y_train_m.copy()
-                y_train_m_delog.loc[-1] = y_logged.iloc[max_lag]
-                y_train_m_delog.index = y_train_m_delog.index + 1
-                y_train_m_delog = y_train_m_delog.sort_index()
-                y_train_m_delog = np.exp(y_train_m_delog.cumsum())
+                y_train_m_destat = y_train_m.copy()
+                y_train_m_destat.loc[-1] = y_logged.iloc[max_lag]
+                y_train_m_destat.index = y_train_m_destat.index + 1
+                y_train_m_destat = y_train_m_destat.sort_index()
+                y_train_m_destat = np.exp(y_train_m_destat.cumsum())
 
 
-                y_pred_in_delog = y_pred_in.copy()
-                y_pred_in_delog.loc[-1] = y_logged.iloc[max_lag]
-                y_pred_in_delog.index = y_pred_in_delog.index + 1
-                y_pred_in_delog = y_pred_in_delog.sort_index()
-                y_pred_in_delog = np.exp(y_pred_in_delog.cumsum())
+                y_pred_in_destat = y_pred_in.copy()
+                y_pred_in_destat.loc[-1] = y_logged.iloc[max_lag]
+                y_pred_in_destat.index = y_pred_in_destat.index + 1
+                y_pred_in_destat = y_pred_in_destat.sort_index()
+                y_pred_in_destat = np.exp(y_pred_in_destat.cumsum())
 
-                MAE_train_delog = np.nanmean(abs(y_pred_in_delog - y_train_m_delog))
+                MAE_train_destat = np.nanmean(abs(y_pred_in_destat - y_train_m_destat))
 
         # Coppying data for ECM imlplementation
         y_test_non_stat = y_test.copy()
@@ -372,7 +382,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         if stationarity_method == 0:
         # if transformation is simple differencing
             for feature in features:
-                # Continue if the feature was found to be stationary withoud tranformation
+                # Continue if the feature was found to be stationary without tranformation
                 if orders_of_integ[feature] == 0:
                     continue
                 else:
@@ -400,6 +410,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
                     for o in integr_list:
                         stationarity_df_test[feature] = stationarity_df_test[feature].diff()
 
+        stationarity_df_test[target] = y_test_non_stat
 
         stationarity_df_test.dropna(inplace=True)
         stationarity_df_test.reset_index(drop=True, inplace=True)
@@ -409,6 +420,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 
         # Formatting the test dataframes to suit the model's exog format
         test_data = []
+
 
         #Finding the maximum seleceted lag length to truncate the test data appropriately
         selected_lag_lens = []
@@ -470,53 +482,70 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         last_oos_ind = first_oos_ind + len(y_test) - 1
         y_pred_out = fin_model.predict(start=first_oos_ind, end=last_oos_ind, exog_oos=test_data)
         y_pred_out.reset_index(drop=True, inplace=True)
+
         MAE_test = np.nanmean(abs(y_pred_out - y_test))
+        MSE_test = mean_squared_error(y_pred_out, y_test)
+        RMSE_test = math.sqrt(MSE_test)
+        RAE_test = rae(actual=y_test, predicted = y_pred_out)
+        RRSE_test = rrse(actual=y_test, predicted = y_pred_out)
+
+
 
         if orders_of_integ[target] > 0:
 
             # Calculating test scores in the original scale
             if stationarity_method == 0:
-                y_pred_out_delog = y_pred_out.copy()
-                y_pred_out_delog.loc[-1] = y_test_non_stat.iloc[max_sel_lag]
-                y_pred_out_delog.index = y_pred_out_delog.index + 1
-                y_pred_out_delog = y_pred_out_delog.sort_index()
-                y_pred_out_delog = y_pred_out_delog.cumsum()
+                y_pred_out_destat = y_pred_out.copy()
+                y_pred_out_destat.loc[-1] = y_test_non_stat.iloc[max_sel_lag]
+                y_pred_out_destat.index = y_pred_out_destat.index + 1
+                y_pred_out_destat = y_pred_out_destat.sort_index()
+                y_pred_out_destat = y_pred_out_destat.cumsum()
 
-                y_test_non_stat_delog = y_test_non_stat.copy()
-                y_test_non_stat_delog = y_test_non_stat_delog.iloc[max_sel_lag:]
-                y_test_non_stat_delog.reset_index(drop=True, inplace=True)
+                y_test_non_stat_destat = y_test_non_stat.copy()
+                y_test_non_stat_destat = y_test_non_stat_destat.iloc[max_sel_lag:]
+                y_test_non_stat_destat.reset_index(drop=True, inplace=True)
                 
-                MAE_test_delog = np.nanmean(abs(y_pred_out_delog - y_test_non_stat_delog))
+                MAE_test_destat = np.nanmean(abs(y_pred_out_destat - y_test_non_stat_destat))
 
             elif stationarity_method == 1:
                 y_test_logged = np.log(y_test_non_stat)
-                y_pred_out_delog = y_pred_out.copy()
-                y_pred_out_delog.loc[-1] = y_test_logged.iloc[max_sel_lag]
-                y_pred_out_delog.index = y_pred_out_delog.index + 1
-                y_pred_out_delog = y_pred_out_delog.sort_index()
-                y_pred_out_delog = np.exp(y_pred_out_delog.cumsum())
+                y_pred_out_destat = y_pred_out.copy()
+                y_pred_out_destat.loc[-1] = y_test_logged.iloc[max_sel_lag]
+                y_pred_out_destat.index = y_pred_out_destat.index + 1
+                y_pred_out_destat = y_pred_out_destat.sort_index()
+                y_pred_out_destat = np.exp(y_pred_out_destat.cumsum())
 
-                y_test_non_stat_delog = y_test_logged.copy()
-                y_test_non_stat_delog = y_test_non_stat_delog.iloc[max_sel_lag:]
-                y_test_non_stat_delog.reset_index(drop=True, inplace=True)
-                y_test_non_stat_delog = np.exp(y_test_non_stat_delog)
+                y_test_non_stat_destat = y_test_logged.copy()
+                y_test_non_stat_destat = y_test_non_stat_destat.iloc[max_sel_lag:]
+                y_test_non_stat_destat.reset_index(drop=True, inplace=True)
+                y_test_non_stat_destat = np.exp(y_test_non_stat_destat)
 
-                MAE_test_delog = np.nanmean(abs(y_pred_out_delog - y_test_non_stat_delog))
+                MAE_test_destat = np.nanmean(abs(y_pred_out_destat - y_test_non_stat_destat))
 
-            MAE = {"train": MAE_train_delog, "test": MAE_test_delog}
+            MAE = {"train": MAE_train_destat, "test": MAE_test_destat}
         else:
             MAE = {"train": MAE_train, "test": MAE_test}
+            y_train_m_destat = y_train_m
+            y_test_non_stat_destat = y_test
+
 
 
         
-        MAE_NonStat = {"train": MAE_train, "test": MAE_test}
+        MAE_stat = {"train": MAE_train, "test": MAE_test}
+        MAE_ = {"Original": MAE, "Stationary": MAE_stat}
         logging.info("Check")
+        destat_data = {"y_train": y_train_m_destat, "y_test": y_test_non_stat_destat,
+                        "stationarity_method": stationarity_method,
+                        "y_integ_order": orders_of_integ[target]}
+        my_metrics_test = {"MAE":[MAE_test], "RMSE":[RMSE_test], "RAE":[RAE_test], "RRSE":[RRSE_test]}
+        my_metrics_train = {"MAE":[MAE_train], "RMSE":[RMSE_train], "RAE":[RAE_train], "RRSE":[RRSE_train]}
+        my_metrics = {"train":my_metrics_train, "test":my_metrics_test}
 
-        Model_Data = Sun_Model(fin_model, fin_model.summary(), aug_models, MAE,
+        Model_Data = Sun_Model(fin_model, fin_model.summary(), aug_models, MAE_,
                                 y_train_m, feature_n_dfs_merge,
                                 y_test, test_data,
-                                y_pred_out)
-
+                                y_pred_out, destat_data,
+                                my_metrics)
         #return fin_model, aug_models, feature_n_dfs, feature_n_dfs_merge, MAE, Sun_Model1
         return Model_Data
     except ValueError:
@@ -526,6 +555,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 #Reading in the data
 df_aapl = pd.read_csv("df_aaple.csv")
 # Truncating the dataw
+aapl_short = df_aapl.iloc[:1600,:16]
 aapl_medium = df_aapl.iloc[:2000,:16]
 aapl_long = df_aapl.iloc[:,:16]
 
@@ -554,18 +584,35 @@ msft_pmd_df = pmd.datasets.load_msft()
 msft_pmd_df = msft_pmd_df.iloc[:,:-1]
 
 
+crypto_data = pd.read_pickle("btc_1d-1.pkl")
+crypto_data["f-34"] = pd.to_numeric(crypto_data["f-34"], errors="coerce")
+crypto_data["f-35"] = pd.to_numeric(crypto_data["f-35"], errors="coerce")
+crypto_data["f-41"] = pd.to_numeric(crypto_data["f-41"], errors="coerce")
+crypto_data.pop("open")
+
+
+
+
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
 
-Model_Data = algo(df=aapl_medium, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
+Model_Data = algo(df=crypto_data, target="close", max_lag=20, stationarity_method = 0, test_size=0.2)
+
+
 
 apple_stat = pd.concat([Model_Data.train_y, Model_Data.train_x], axis=1)
 apple_stat.to_csv("aaple_stat.csv", index=True)
 
 
+
+
 print(Model_Data.summary)
 
 
-print(Model_Data.MAE)
+print(f'MAE on the original scale is: \n{Model_Data.MAE["Original"]}\n\n')
+print(f'MAE on the stationaries scale is: \n{Model_Data.MAE["Stationary"]}')
+print(Model_Data.my_metrics["test"])
+
+
 # print(Model_Data.train_y)
 
 

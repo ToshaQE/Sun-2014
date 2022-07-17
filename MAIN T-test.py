@@ -29,6 +29,8 @@ from tqdm.notebook import trange, tqdm
 from FRUFS import FRUFS
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+from statsmodels.tools.eval_measures import meanabs
+
 
 
 
@@ -47,12 +49,15 @@ from sklearn.model_selection import train_test_split
 import re
 import logging
 import plotly.express as px
+import math
 
 
 from Sun_Model_Class import Sun_Model
 # logging.INFO
 
 import pmdarima as pmd
+
+from my_metrics import rae, rrse
 
 
 
@@ -62,15 +67,15 @@ import pmdarima as pmd
 def algo(df, target, max_lag, stationarity_method, test_size):
 
     # Cleaning column names
-    col_names = list(df.columns)
-    new_names = []
-    for n in col_names:
-        n = re.sub('[^A-Za-z0-9#% ]+', '', n)
-        n = re.sub('[^A-Za-z0-9% ]+', 'n', n)
-        n = re.sub('[^A-Za-z0-9 ]+', 'pc', n)
-        n = re.sub('[^A-Za-z0-9]+', '_', n)
-        new_names.append(n)
-    df.columns = new_names
+    # col_names = list(df.columns)
+    # new_names = []
+    # for n in col_names:
+    #     n = re.sub('[^A-Za-z0-9#% ]+', '', n)
+    #     n = re.sub('[^A-Za-z0-9% ]+', 'n', n)
+    #     n = re.sub('[^A-Za-z0-9 ]+', 'pc', n)
+    #     n = re.sub('[^A-Za-z0-9]+', '_', n)
+    #     new_names.append(n)
+    # df.columns = new_names
 
     # Step 1: Tranformation for stationarity d
     # Here features are everything except for the date
@@ -79,20 +84,27 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 
     X_train, X_test, y_train, y_test = train_test_split(feature_df, target_df, test_size=test_size, shuffle=False)
     
+    # Resetting index for later modelling purposes
+    X_test.reset_index(drop=True, inplace=True)
+    y_test.reset_index(drop=True, inplace=True)
 
+    # Dataframe to perform ADF test
     staionarity_df = pd.concat([y_train, X_train], axis=1)
 
     features = list(staionarity_df.columns)
 
     # features = [n for n in list(X_train.columns) if n != "Date"]
     
+    # Coppying dataframes for stationarity and back-transformation purposes
     yx_train_original = staionarity_df.copy()
+    y_original = y_train.copy()
+    y_logged = np.log(y_original)
 
     orders_of_integ = {}
     const_counters = {}
 
     for feature in features:
-        result = adfuller(staionarity_df[feature], autolag="t-stat")
+        result = adfuller(staionarity_df[feature], autolag="t-stat", regression="c")
         counter = 0
         if stationarity_method == 0:
             while result[1] >= 0.01:
@@ -100,7 +112,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
                 #df_small.dropna()
                 counter += 1
                 #dropna(inplace=False) because it drops one observation for each feature
-                result = adfuller(staionarity_df.dropna()[feature], autolag="t-stat")
+                result = adfuller(staionarity_df.dropna()[feature], autolag="t-stat", regression="c")
             print(f'Order of integration for feature "{feature}" is {counter}')
             orders_of_integ[feature] = counter
         elif stationarity_method == 1:
@@ -132,6 +144,8 @@ def algo(df, target, max_lag, stationarity_method, test_size):
             orders_of_integ[feature] = counter
             const_counters[feature] = const_counter
 
+    staionarity_df[target] = y_original
+
     staionarity_df.dropna(inplace=True)
     staionarity_df.reset_index(drop=True, inplace=True)
 
@@ -145,7 +159,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
     x_features = list(X_train.columns)
 
     for x_feature in x_features:
-        if orders_of_integ[target] == orders_of_integ[x_feature] & orders_of_integ[target] != 0:
+        if orders_of_integ[target] == orders_of_integ[x_feature] and orders_of_integ[target] != 0:
             E_G = engle_granger(yx_train_original[target], yx_train_original[x_feature], trend = "n", method = "t-stat")
             if E_G.pvalue < 0.05:
                 cointegr_dict[x_feature] = 1
@@ -204,6 +218,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
     # Truncating y_train for model training at max_lag length
     y_train_m = y_train.iloc[max_lag:]
     y_train_m.reset_index(drop=True, inplace=True)
+
     # Defining dictionary to store all augmented models
     aug_models = {}
     feature_n_dfs = {}
@@ -219,8 +234,8 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         for i in list(range(max_lag)):
             feature_n_df[columns[i]] = X_train[x].shift(i+1)
 
-        # NAs filled with are later automatically truncated by the AutoReg
-        feature_n_df.fillna(1, inplace=True)
+        # # NAs filled with are later automatically truncated by the AutoReg
+        # feature_n_df.fillna(1, inplace=True)
 
         feature_n_df = feature_n_df.iloc[max_lag:,:]
         feature_n_df.reset_index(drop=True, inplace=True)
@@ -236,36 +251,95 @@ def algo(df, target, max_lag, stationarity_method, test_size):
             BICs.append(model.bic)
 
         min_bic_ind_aug = BICs.index(min(BICs))
-        #Full and Partial autocorrelation plot?
         feature_n_df1 = y_and_x_lags_df
         y_and_x_lags_df = y_and_x_lags_df.iloc[:,:min_bic_ind_aug+len(list(y_lags_df.columns))+1]
         y_and_x_lags_df.reset_index(drop=True, inplace=True)
 
-        # Adding ECM residual to the feature n dataset if it appears to be cointegrated with the target
-        if x in list(ECM_residuals.keys()):
-            ECM_res_name = x + "_ECM_Res.L1"
-            y_and_x_lags_df[ECM_res_name] = ECM_residuals[x]
 
+
+
+        #Sequential t-testing to keep only significant lags
         model = AutoReg(y_train_m, lags=0, exog=y_and_x_lags_df).fit()
+        not_sig_lags = []
+        # Defining critiacl p-value determining whether a feture is to be dropped
+        critical_p_value = 0.05
+        # Finding p-value of the least siginificant non-target feature
+        regressors = list(model.pvalues.index)
+        non_target_regressors = []
+        for r in regressors:
+            original_feature_name = r.split(".")[0]
+            if original_feature_name != target and original_feature_name != "const":
+                non_target_regressors.append(r)
+            else:
+                continue
+        
+        non_target_exists = len(non_target_regressors) != 0
+        non_target_pvalues = model.pvalues.loc[non_target_regressors]
+        max_p_value = max(non_target_pvalues)
+        least_sig_var = list(non_target_pvalues[non_target_pvalues == max_p_value].index)[0]
 
-        gr_test_df = pd.concat([X_train[x], y_train], axis=1)
-        granger_p_stat = grangercausalitytests(gr_test_df, maxlag=[min_bic_ind_aug+1])[min_bic_ind_aug+1][0]['params_ftest'][1]
-        if granger_p_stat >= 0.05:
-            aug_models[x] = model
-            feature_n_dfs[x] = feature_n_df1
-            feature_n_dfs_merge.append(y_and_x_lags_df.iloc[:,len(list(y_lags_df.columns)):])
-            n_lags_for_xi[x] = min_bic_ind_aug + 1
-            #model.summary()
-        elif granger_p_stat >= 0.01:
-            print(f'\n\nGranger causality from "{target}" to "{x}" can not be rejected with a p-value={granger_p_stat:.3}')
-        else:
+        #while the max p value is greater then the critical value
+        #we drop the respective non-target variable and re-estimate the model
+        #Backward t-testing
+        while max_p_value >= critical_p_value:
+            y_and_x_lags_df.pop(least_sig_var)
+            model = AutoReg(y_train_m, lags=0, exog=y_and_x_lags_df).fit()
+
+            # At the end of each iteration we find the new highest p-value
+            regressors = list(model.pvalues.index)
+            non_target_regressors = []
+            for r in regressors:
+                original_feature_name = r.split(".")[0]
+                if original_feature_name != target and original_feature_name != "const":
+                    non_target_regressors.append(r)
+                else:
+                    continue
+            
+            non_target_exists = len(non_target_regressors) != 0
+
+            #Check if any non-target still present in the regression             
+            if non_target_exists == False:
+                break
+            else:
+                non_target_pvalues = model.pvalues.loc[non_target_regressors]
+                max_p_value = max(non_target_pvalues)
+                least_sig_var = list(non_target_pvalues[non_target_pvalues == max_p_value].index)[0]
+
+        # If no lags of x have significant coefficients then x does not granger cause Y 
+        if non_target_exists == False:
             continue
+        
+        else:
+
+            # Adding ECM residual to the feature n dataset if it appears to be cointegrated with the target
+            if x in list(ECM_residuals.keys()):
+                ECM_res_name = x + "_ECM_Res.L1"
+                y_and_x_lags_df[ECM_res_name] = ECM_residuals[x]
+
+            model = AutoReg(y_train_m, lags=0, exog=y_and_x_lags_df).fit()
 
 
-        # aug_models[features[n]] = model
-        # feature_n_dfs[features[n]] = feature_n_df1
-        # feature_n_dfs_merge.append(feature_n_df)
-        # #model.summary()
+
+
+            #Testing the cause-effect relationship
+            gr_test_df = pd.concat([X_train[x], y_train], axis=1)
+            granger_p_stat = grangercausalitytests(gr_test_df, maxlag=[min_bic_ind+1])[min_bic_ind+1][0]['params_ftest'][1]
+            if granger_p_stat >= 0.05:
+                aug_models[x] = model
+                feature_n_dfs[x] = feature_n_df1
+                feature_n_dfs_merge.append(y_and_x_lags_df.iloc[:,len(list(y_lags_df.columns)):])
+                n_lags_for_xi[x] = min_bic_ind_aug + 1
+                #model.summary()
+            elif granger_p_stat >= 0.01:
+                print(f'\n\nGranger causality from "{target}" to "{x}" can not be rejected with a p-value={granger_p_stat:.3}')
+            else:
+                continue
+
+
+            # aug_models[features[n]] = model
+            # feature_n_dfs[features[n]] = feature_n_df1
+            # feature_n_dfs_merge.append(feature_n_df)
+            # #model.summary()
     
     try:
         
@@ -315,6 +389,46 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 
         y_pred_in = fin_model.predict()
         MAE_train = np.nanmean(abs(y_pred_in - y_train_m))
+        MSE_train = mean_squared_error(y_pred_in, y_train_m)
+        RMSE_train = math.sqrt(MSE_train)
+        RAE_train = rae(actual=y_train_m, predicted = y_pred_in)
+        RRSE_train = rrse(actual=y_train_m, predicted = y_pred_in)
+
+        if orders_of_integ[target] > 0:
+
+            # Calculating train scores in the original scale
+
+            if stationarity_method == 0:
+                y_train_m_destat = y_train_m.copy()
+                y_train_m_destat.loc[-1] = y_original.iloc[max_lag]
+                y_train_m_destat.index = y_train_m_destat.index + 1
+                y_train_m_destat = y_train_m_destat.sort_index()
+                y_train_m_destat = y_train_m_destat.cumsum()
+
+
+                y_pred_in_destat = y_pred_in.copy()
+                y_pred_in_destat.loc[-1] = y_original.iloc[max_lag]
+                y_pred_in_destat.index = y_pred_in_destat.index + 1
+                y_pred_in_destat = y_pred_in_destat.sort_index()
+                y_pred_in_destat = y_pred_in_destat.cumsum()
+
+                MAE_train_destat = np.nanmean(abs(y_pred_in_destat - y_train_m_destat))
+
+            elif stationarity_method == 1:
+                y_train_m_destat = y_train_m.copy()
+                y_train_m_destat.loc[-1] = y_logged.iloc[max_lag]
+                y_train_m_destat.index = y_train_m_destat.index + 1
+                y_train_m_destat = y_train_m_destat.sort_index()
+                y_train_m_destat = np.exp(y_train_m_destat.cumsum())
+
+
+                y_pred_in_destat = y_pred_in.copy()
+                y_pred_in_destat.loc[-1] = y_logged.iloc[max_lag]
+                y_pred_in_destat.index = y_pred_in_destat.index + 1
+                y_pred_in_destat = y_pred_in_destat.sort_index()
+                y_pred_in_destat = np.exp(y_pred_in_destat.cumsum())
+
+                MAE_train_destat = np.nanmean(abs(y_pred_in_destat - y_train_m_destat))
 
         # Coppying data for ECM imlplementation
         y_test_non_stat = y_test.copy()
@@ -327,7 +441,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         if stationarity_method == 0:
         # if transformation is simple differencing
             for feature in features:
-                # Continue if the feature was found to be stationary withoud tranformation
+                # Continue if the feature was found to be stationary without tranformation
                 if orders_of_integ[feature] == 0:
                     continue
                 else:
@@ -355,6 +469,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
                     for o in integr_list:
                         stationarity_df_test[feature] = stationarity_df_test[feature].diff()
 
+        stationarity_df_test[target] = y_test_non_stat
 
         stationarity_df_test.dropna(inplace=True)
         stationarity_df_test.reset_index(drop=True, inplace=True)
@@ -364,6 +479,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 
         # Formatting the test dataframes to suit the model's exog format
         test_data = []
+
 
         #Finding the maximum seleceted lag length to truncate the test data appropriately
         selected_lag_lens = []
@@ -425,16 +541,70 @@ def algo(df, target, max_lag, stationarity_method, test_size):
         last_oos_ind = first_oos_ind + len(y_test) - 1
         y_pred_out = fin_model.predict(start=first_oos_ind, end=last_oos_ind, exog_oos=test_data)
         y_pred_out.reset_index(drop=True, inplace=True)
-        MAE_test = np.nanmean(abs(y_pred_out - y_test))
-        
-        MAE = {"train": MAE_train, "test": MAE_test}
-        logging.info("Check")
 
-        Model_Data = Sun_Model(fin_model, fin_model.summary(), aug_models, MAE,
+        MAE_test = np.nanmean(abs(y_pred_out - y_test))
+        MSE_test = mean_squared_error(y_pred_out, y_test)
+        RMSE_test = math.sqrt(MSE_test)
+        RAE_test = rae(actual=y_test, predicted = y_pred_out)
+        RRSE_test = rrse(actual=y_test, predicted = y_pred_out)
+
+
+
+        if orders_of_integ[target] > 0:
+
+            # Calculating test scores in the original scale
+            if stationarity_method == 0:
+                y_pred_out_destat = y_pred_out.copy()
+                y_pred_out_destat.loc[-1] = y_test_non_stat.iloc[max_sel_lag]
+                y_pred_out_destat.index = y_pred_out_destat.index + 1
+                y_pred_out_destat = y_pred_out_destat.sort_index()
+                y_pred_out_destat = y_pred_out_destat.cumsum()
+
+                y_test_non_stat_destat = y_test_non_stat.copy()
+                y_test_non_stat_destat = y_test_non_stat_destat.iloc[max_sel_lag:]
+                y_test_non_stat_destat.reset_index(drop=True, inplace=True)
+                
+                MAE_test_destat = np.nanmean(abs(y_pred_out_destat - y_test_non_stat_destat))
+
+            elif stationarity_method == 1:
+                y_test_logged = np.log(y_test_non_stat)
+                y_pred_out_destat = y_pred_out.copy()
+                y_pred_out_destat.loc[-1] = y_test_logged.iloc[max_sel_lag]
+                y_pred_out_destat.index = y_pred_out_destat.index + 1
+                y_pred_out_destat = y_pred_out_destat.sort_index()
+                y_pred_out_destat = np.exp(y_pred_out_destat.cumsum())
+
+                y_test_non_stat_destat = y_test_logged.copy()
+                y_test_non_stat_destat = y_test_non_stat_destat.iloc[max_sel_lag:]
+                y_test_non_stat_destat.reset_index(drop=True, inplace=True)
+                y_test_non_stat_destat = np.exp(y_test_non_stat_destat)
+
+                MAE_test_destat = np.nanmean(abs(y_pred_out_destat - y_test_non_stat_destat))
+
+            MAE = {"train": MAE_train_destat, "test": MAE_test_destat}
+        else:
+            MAE = {"train": MAE_train, "test": MAE_test}
+            y_train_m_destat = y_train_m
+            y_test_non_stat_destat = y_test
+
+
+
+        
+        MAE_stat = {"train": MAE_train, "test": MAE_test}
+        MAE_ = {"Original": MAE, "Stationary": MAE_stat}
+        logging.info("Check")
+        destat_data = {"y_train": y_train_m_destat, "y_test": y_test_non_stat_destat,
+                        "stationarity_method": stationarity_method,
+                        "y_integ_order": orders_of_integ[target]}
+        my_metrics_test = {"MAE":[MAE_test], "RMSE":[RMSE_test], "RAE":[RAE_test], "RRSE":[RRSE_test]}
+        my_metrics_train = {"MAE":[MAE_train], "RMSE":[RMSE_train], "RAE":[RAE_train], "RRSE":[RRSE_train]}
+        my_metrics = {"train":my_metrics_train, "test":my_metrics_test}
+
+        Model_Data = Sun_Model(fin_model, fin_model.summary(), aug_models, MAE_,
                                 y_train_m, feature_n_dfs_merge,
                                 y_test, test_data,
-                                y_pred_out)
-
+                                y_pred_out, destat_data,
+                                my_metrics)
         #return fin_model, aug_models, feature_n_dfs, feature_n_dfs_merge, MAE, Sun_Model1
         return Model_Data
     except ValueError:
@@ -444,6 +614,7 @@ def algo(df, target, max_lag, stationarity_method, test_size):
 #Reading in the data
 df_aapl = pd.read_csv("df_aaple.csv")
 # Truncating the dataw
+aapl_short = df_aapl.iloc[:1600,:16]
 aapl_medium = df_aapl.iloc[:2000,:16]
 aapl_long = df_aapl.iloc[:,:16]
 
@@ -463,7 +634,7 @@ google_long = df_google.iloc[:,:16]
 df_dehli = pd.read_csv("dehli_weather.csv")
 
 df_air_q = pd.read_csv("AirQualityUCI.csv")
-# df_air_q.drop("Date", axis=1, inplace=True)
+# df_air_q.drop("Date", axis=1, inplace=True) CO(GT)
 # pd.DataFrame.to_csv(df_air_q, "df_air_q_no_date.csv", index=True)
 
 
@@ -472,18 +643,35 @@ msft_pmd_df = pmd.datasets.load_msft()
 msft_pmd_df = msft_pmd_df.iloc[:,:-1]
 
 
+crypto_data = pd.read_pickle("btc_1d-1.pkl")
+crypto_data["f-34"] = pd.to_numeric(crypto_data["f-34"], errors="coerce")
+crypto_data["f-35"] = pd.to_numeric(crypto_data["f-35"], errors="coerce")
+crypto_data["f-41"] = pd.to_numeric(crypto_data["f-41"], errors="coerce")
+crypto_data.pop("open")
+
+
+
+
 #fin_model, aug_models, dfs, dfs_merged, MAE, Model = algo(df=df_medium, target="Close", max_lag=20)
 
-Model_Data = algo(df=aapl_medium, target="Close", max_lag=20, stationarity_method = 1, test_size=0.05)
+Model_Data = algo(df=aapl_short, target="Close", max_lag=20, stationarity_method = 0, test_size=0.2)
+
+
 
 apple_stat = pd.concat([Model_Data.train_y, Model_Data.train_x], axis=1)
 apple_stat.to_csv("aaple_stat.csv", index=True)
 
 
+
+
 print(Model_Data.summary)
 
 
-print(Model_Data.MAE)
+print(f'MAE on the original scale is: \n{Model_Data.MAE["Original"]}\n\n')
+print(f'MAE on the stationaries scale is: \n{Model_Data.MAE["Stationary"]}')
+print(Model_Data.my_metrics["test"])
+
+
 # print(Model_Data.train_y)
 
 
