@@ -62,8 +62,8 @@ FRUFS_Loop = {"MAE Train":[], "MAE Test":[], "Feature %":[], "Feature Dropped":[
 # pruned_df = pruned_df[pruned_df.columns[::-1]]
 
 column_names = list(pruned_df.columns)
-# column_names = ['Close.L1', 'Close.L2', 'Close.L6', 'Close.L13', 'Close.L10', 'EPS - Est High (NTM).L1']
-# pruned_df = pruned_df[column_names]
+column_names = ['Close.L1', 'Close.L2', 'Close.L6', 'Close.L13', 'Close.L10', 'EPS - Est High (NTM).L1']
+pruned_df = pruned_df[column_names]
 print("hello")
 for n in list(range(total_n_features, 0, -1)):
 

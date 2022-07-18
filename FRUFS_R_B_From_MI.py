@@ -55,7 +55,7 @@ model_frufs_generated = FRUFS(
 pruned_df = model_frufs_generated.fit_transform(sun_x_train)
 
 FRUFS_Loop = {"MAE Train":[], "MAE Test":[], "Feature %":[], "Feature Dropped":[]}
-pruned_df = pruned_df[pruned_df.columns[::-1]]
+# pruned_df = pruned_df[pruned_df.columns[::-1]]
 
 # column_names = list(pruned_df.columns)
 for n in list(range(total_n_features, 0, -1)):
@@ -72,6 +72,7 @@ for n in list(range(total_n_features, 0, -1)):
         # column_dropped = column_names[n]
         # pruned_df_cut = pruned_df_cut.iloc[:,:n]
         pruned_df_cut = model_frufs_generated.fit_transform(pruned_df_cut)
+        pruned_df_cut = pruned_df_cut[pruned_df_cut.columns[::-1]]
         column_names = list(pruned_df_cut.columns)
         column_dropped = column_names[n]
         pruned_df_cut = pruned_df_cut.iloc[:,:n]
